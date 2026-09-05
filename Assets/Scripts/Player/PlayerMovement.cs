@@ -1,20 +1,21 @@
 using System;
+using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace Game
 {
     [RequireComponent(typeof(NetworkRigidbody2D))]
-    public class PlayerMovement : MonoBehaviour
+    public class PlayerMovement : NetworkBehaviour
     {
         [SerializeField] private NetworkRigidbody2D rb;
         [SerializeField] private float moveSpeed = 5f;
 
-        [SerializeField] private Vector2 moveInput;
-        [SerializeField] private Vector2 lastDirection = Vector2.down;
+        [SerializeField] private NetworkVariable<Vector2> moveInput = new();
+        [SerializeField] private NetworkVariable<Vector2> facingDirection = new(Vector2.down);
 
-        public Vector2 MoveInput => moveInput;
-        public Vector2 LastDirection => lastDirection;
+        public Vector2 MoveInput => moveInput.Value;
+        public Vector2 FacingDirection => facingDirection.Value;
 
         private void Awake()
         {
@@ -28,20 +29,22 @@ namespace Game
 
         public void SetInput(Vector2 input)
         {
-            moveInput = input;
+            moveInput.Value = input;
 
-            if (input.sqrMagnitude > 0.001f)
-                lastDirection = input.normalized;
+            if (input.sqrMagnitude > 0.0001f)
+            {
+                facingDirection.Value = input.normalized;
+            }
         }
 
         public void Process()
         {
-            rb.Rigidbody2D.linearVelocity = moveInput * moveSpeed;
+            rb.Rigidbody2D.linearVelocity = moveInput.Value * moveSpeed;
         }
 
         public void Stop()
         {
-            moveInput = Vector2.zero;
+            moveInput.Value = Vector2.zero;
             rb.Rigidbody2D.linearVelocity = Vector2.zero;
         }
     }

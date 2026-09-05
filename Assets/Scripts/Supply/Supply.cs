@@ -1,103 +1,128 @@
 using System;
+using Sirenix.OdinInspector;
 using Unity.Netcode;
+using UnityEngine;
 
 namespace Game
 {
-    public enum SupplyState
-    {
-        None,
-        Available,
-        Picked,
-    }
-    
     public class Supply : NetworkBehaviour, IInteractable
     {
-        public event Action<Supply> OnReleased;
+        [SerializeField] private SpriteRenderer icon;
+        
+        public NetworkVariable<SupplyData> Data { get; private set; } = new();
 
-        public NetworkVariable<SupplyState> State { get; private set; } =
-            new(
-                SupplyState.None,
-                NetworkVariableReadPermission.Everyone,
-                NetworkVariableWritePermission.Server
-            );
+        private SupplyData pendingSupply;
 
+        public SupplySO Definition
+        {
+            get
+            {
+                Debug.Log("Data Supply: " + Data.Value);
+                
+                if (!Data.Value.IsValid)
+                    return null;
+
+                return SupplyCollection.Singleton.GetSupply(Data.Value.ToString());
+            }
+        }
+
+        public event Action<Supply> Release;
+        
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
 
-            if (!IsServer)
-                return;
-
-            State.Value = SupplyState.Available;
+            Data.OnValueChanged += OnDataChanged;
+            
+            if (IsServer)
+            {
+                Debug.Log("Process Data Pending Supply: " + pendingSupply);
+                Data.Value = pendingSupply;
+            }
+            
+            RefreshVisual();
         }
 
-        public bool CanInteract(Player owner)
+        public void PrepareSpawn(SupplyData data)
         {
-            if (owner == null)
+            if (!IsServer)
+                return;
+            
+            pendingSupply = data;
+            
+            Debug.Log("Prepare Spawn Supply: " + data);
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            Data.OnValueChanged -= OnDataChanged;
+
+            Release?.Invoke(this);
+
+            base.OnNetworkDespawn();
+        }
+
+        private void OnDataChanged(SupplyData previous, SupplyData current)
+        {
+            RefreshVisual();
+        }
+
+        private void RefreshVisual()
+        {
+            if (icon == null)
+                return;
+
+            SupplySO definition = Definition;
+            
+            if (definition == null)
+            {
+                icon.enabled = false;
+                icon.sprite = null;
+                return;
+            }
+
+            icon.sprite = definition.Icon;
+            icon.enabled = true;
+        }
+
+        public void SetHighlight(bool isHighlighted)
+        {
+            // TODO
+        }
+
+        public bool CanInteract(Player player)
+        {
+            if (player == null)
+            {
                 return false;
+            }
 
             if (!IsSpawned)
+            {
                 return false;
+            }
 
-            if (State.Value != SupplyState.Available)
+            if (!Data.Value.IsValid)
+            {
                 return false;
+            }
 
-            if (owner.Pickup == null)
+            if (player.Pickup == null)
+            {
                 return false;
+            }
 
-            if (owner.Pickup.HasSupply)
+            if (player.Pickup.IsCarrying)
+            {
                 return false;
-
+            }
+            
             return true;
         }
 
         public void Interact(Player player)
         {
-            if (!IsServer)
-                return;
-
-            if (!CanInteract(player))
-                return;
-
-            if (!player.Pickup.TryPickup(this))
-                return;
-
-            State.Value = SupplyState.Picked;
-        }
-
-        public void SetAvailable()
-        {
-            if (!IsServer)
-                return;
-
-            State.Value = SupplyState.Available;
-        }
-
-        public void SetPicked()
-        {
-            if (!IsServer)
-                return;
-
-            State.Value = SupplyState.Picked;
-        }
-
-        public void Release()
-        {
-            if (!IsServer)
-                return;
-
-            if (!IsSpawned)
-                return;
-
-            OnReleased?.Invoke(this);
-        }
-
-        public void SetHighlight(bool isHighlighted)
-        {
-            // Visual only.
-            //
-            // Contoh:
-            // highlight.SetActive(isHighlighted);
+            player.Pickup.TryPickup(this);
         }
     }
 }

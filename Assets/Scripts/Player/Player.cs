@@ -32,7 +32,6 @@ namespace Game
             input = new PlayerInputReader();
 
             interactor.Initialize(this);
-            pickup.Initialize(this);
         }
 
         private void Reset()
@@ -47,7 +46,6 @@ namespace Game
             base.OnNetworkSpawn();
 
             interactor.Initialize(this);
-            pickup.Initialize(this);
 
             if (!IsOwner)
                 return;
@@ -100,42 +98,73 @@ namespace Game
 
         private void OnInteract()
         {
-            if (!interactor.TryGetTarget(out IInteractable target))
-                return;
-
-            if (target is not Component component)
-                return;
-
-            NetworkObject networkObject =
-                component.GetComponent<NetworkObject>();
-
-            if (networkObject == null)
-                return;
-
-            SendInteractToServerRpc(
-                networkObject.NetworkObjectId
-            );
-        }
-
-        [Rpc(SendTo.Server)]
-        private void SendInteractToServerRpc(
-            ulong networkObjectId)
-        {
-            if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(
-                    networkObjectId,
-                    out NetworkObject networkObject))
+            if (pickup == null)
             {
                 return;
             }
 
-            IInteractable interactable =
-                networkObject.GetComponent<IInteractable>();
+            if (pickup.IsCarrying)
+            {
+                pickup.TryDrop();
+                return;
+            }
+
+            if (interactor == null)
+            {
+                return;
+            }
+
+            if (!interactor.TryGetTarget(out IInteractable target))
+            {
+                return;
+            }
+            
+            if (target is not Component component)
+            {
+                return;
+            }
+
+            NetworkObject networkObject = component.GetComponent<NetworkObject>();
+
+            if (networkObject == null)
+            {
+                return;
+            }
+
+            if (!networkObject.IsSpawned)
+            {
+                return;
+            }
+
+            SendInteractToServerRpc(networkObject.NetworkObjectId);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void SendInteractToServerRpc(ulong networkObjectId)
+        {
+            if (NetworkManager.Singleton == null)
+            {
+                return;
+            }
+
+            if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out NetworkObject networkObject))
+            {
+                return;
+            }
+            
+            IInteractable interactable = networkObject.GetComponent<IInteractable>();
 
             if (interactable == null)
+            {
                 return;
-
-            if (!interactable.CanInteract(this))
+            }
+            
+            bool canInteract = interactable.CanInteract(this);
+            
+            if (!canInteract)
+            {
                 return;
+            }
 
             interactable.Interact(this);
         }

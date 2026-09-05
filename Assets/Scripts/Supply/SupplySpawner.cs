@@ -26,9 +26,12 @@ namespace Game
         private ObjectPool<Supply> pool;
 
         private float spawnTimer;
-
+        public static SupplySpawner Singleton { get; private set; }
+        
         private void Awake()
         {
+            Singleton = this;
+            
             pool = new ObjectPool<Supply>(
                 CreateSupply,
                 OnGetSupply,
@@ -62,6 +65,8 @@ namespace Game
 
         private void Update()
         {
+            if (true) return;
+            
             if (!IsServer)
                 return;
 
@@ -78,55 +83,45 @@ namespace Game
             TrySpawn();
         }
 
-        [Button]
+        [ContextMenu("Spawn")]
         public bool TrySpawn()
         {
             if (!IsServer)
                 return false;
 
-            if (prefab == null)
-            {
-                Debug.LogWarning(
-                    "SupplySpawner has no prefab.",
-                    this
-                );
-
-                return false;
-            }
-
             if (!TryGetSpawnPosition(out Vector2 spawnPosition))
-            {
-                Debug.LogWarning(
-                    $"Failed to find valid spawn position after " +
-                    $"{maxSpawnAttempts} attempts.",
-                    this
-                );
-
                 return false;
-            }
 
             Supply supply = pool.Get();
+            SupplySO supplySo = SupplyCollection.Singleton.GetRandomSupply();
 
-            supply.transform.SetPositionAndRotation(
-                spawnPosition,
-                Quaternion.identity
-            );
-
+            SupplyData supplyData = supplySo.Create();
+            supply.PrepareSpawn(supplyData);
+            supply.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
             supply.NetworkObject.Spawn();
 
             return true;
         }
 
+        public void SpecificSpawn(Vector3 spawnPosition, SupplyData data)
+        {
+            if (!IsServer)
+                return;
+            
+            Supply supply = pool.Get();
+            supply.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
+
+            supply.PrepareSpawn(data);
+            
+            supply.NetworkObject.Spawn();
+        } 
+
         private Supply CreateSupply()
         {
-            Supply supply = Instantiate(
-                prefab,
-                transform
-            );
-
+            Supply supply = Instantiate(prefab, transform);
             supply.gameObject.SetActive(false);
 
-            supply.OnReleased += HandleSupplyReleased;
+            supply.Release += HandleSupplyReleased;
 
             return supply;
         }
@@ -140,20 +135,13 @@ namespace Game
         {
             supply.gameObject.SetActive(false);
 
-            supply.transform.SetParent(
-                transform,
-                false
-            );
-
-            supply.transform.SetLocalPositionAndRotation(
-                Vector3.zero,
-                Quaternion.identity
-            );
+            supply.transform.SetParent(transform, false);
+            supply.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
         }
 
         private void OnDestroySupply(Supply supply)
         {
-            supply.OnReleased -= HandleSupplyReleased;
+            supply.Release -= HandleSupplyReleased;
 
             Destroy(supply.gameObject);
         }
@@ -171,8 +159,7 @@ namespace Game
             pool.Release(supply);
         }
 
-        private bool TryGetSpawnPosition(
-            out Vector2 position)
+        private bool TryGetSpawnPosition(out Vector2 position)
         {
             for (int i = 0; i < maxSpawnAttempts; i++)
             {

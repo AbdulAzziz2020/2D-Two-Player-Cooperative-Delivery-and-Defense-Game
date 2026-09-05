@@ -81,7 +81,7 @@ namespace Game
             float bestScore = float.MinValue;
 
             Vector2 position = transform.position;
-            Vector2 forward = owner.Movement.LastDirection;
+            Vector2 forward = owner.Movement.FacingDirection;
 
             if (forward.sqrMagnitude <= 0.0001f)
                 forward = Vector2.up;
@@ -156,7 +156,7 @@ namespace Game
         private void OnDrawGizmos()
         {
             Vector3 position = transform.position;
-            Vector3 forward = owner?.Movement.LastDirection ?? Vector2.up;
+            Vector3 forward = owner?.Movement.FacingDirection ?? Vector2.up;
 
             DrawDetectionGizmos(position, forward);
             DrawTargetGizmos(position);

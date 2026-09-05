@@ -3,92 +3,161 @@ using UnityEngine;
 
 namespace Game
 {
-    public class PlayerPickup : MonoBehaviour
+    public class PlayerPickup : NetworkBehaviour
     {
-        [SerializeField] private Transform carryPoint;
+        [Header("Drop")]
+        [SerializeField] private float dropRadius = 1.5f;
 
-        private Player player;
-        private Supply currentSupply;
+        [Header("Visual")]
+        [SerializeField] private SpriteRenderer pickedIcon;
 
-        public Supply CurrentSupply => currentSupply;
-        public bool HasSupply => currentSupply != null;
+        public NetworkVariable<SupplyData> Data { get; private set; } =
+            new(
+                default,
+                NetworkVariableReadPermission.Everyone,
+                NetworkVariableWritePermission.Server
+            );
 
-        public void Initialize(Player player)
+        public bool IsCarrying => Data.Value.IsValid;
+
+        public SupplyData CurrentData => Data.Value;
+
+        public override void OnNetworkSpawn()
         {
-            this.player = player;
+            base.OnNetworkSpawn();
+
+            Data.OnValueChanged += OnDataChanged;
+
+            RefreshVisual();
         }
 
-        public bool TryPickup(Supply supply)
+        public override void OnNetworkDespawn()
         {
-            if (player == null)
-                return false;
+            Data.OnValueChanged -= OnDataChanged;
+
+            base.OnNetworkDespawn();
+        }
+
+        public void TryPickup(Supply supply)
+        {
+            if (supply == null)
+                return;
+
+            if (IsCarrying)
+                return;
+
+            if (!supply.IsSpawned)
+                return;
+
+            PickupRpc(new NetworkObjectReference(supply.NetworkObject));
+        }
+
+        public void TryDrop()
+        {
+            if (!IsCarrying)
+                return;
+
+            DropRpc();
+        }
+
+        [Rpc(SendTo.Server)]
+        private void PickupRpc(NetworkObjectReference supplyReference)
+        {
+            if (IsCarrying)
+                return;
+
+            if (!supplyReference.TryGet(out NetworkObject networkObject))
+            {
+                return;
+            }
+
+            Supply supply = networkObject.GetComponent<Supply>();
 
             if (supply == null)
-                return false;
+                return;
 
-            if (currentSupply != null)
+            if (!ValidatePickup(supply))
+                return;
+
+            SupplyData data = supply.Data.Value;
+
+            if (!data.IsValid)
+                return;
+
+            // Transfer item data dari world ke player.
+            Data.Value = data;
+
+            // Hapus world representation.
+            supply.NetworkObject.Despawn(false);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void DropRpc()
+        {
+            if (!IsCarrying)
+                return;
+
+            SupplyData data = Data.Value;
+
+            if (!data.IsValid)
+                return;
+            
+            var dropPosition = GetRandomDropPosition();
+            SupplySpawner.Singleton.SpecificSpawn(dropPosition, data);
+
+            // Item sudah berhasil dikembalikan ke world.
+            Data.Value = SupplyData.Empty;
+        }
+
+        private bool ValidatePickup(Supply supply)
+        {
+            if (!IsServer)
                 return false;
 
             if (!supply.IsSpawned)
                 return false;
 
-            if (!player.IsServer)
+            if (!supply.Data.Value.IsValid)
                 return false;
-
-            currentSupply = supply;
-
-            NetworkObject networkObject = supply.NetworkObject;
-
-            if (!networkObject.TrySetParent(carryPoint, false))
-            {
-                currentSupply = null;
-                return false;
-            }
-
-            networkObject.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-            return true;
-        }
-
-        public bool TryDrop()
-        {
-            if (currentSupply == null)
-                return false;
-
-            if (!player.IsServer)
-                return false;
-
-            Supply supply = currentSupply;
-            currentSupply = null;
-
-            NetworkObject networkObject = supply.NetworkObject;
-
-            if (networkObject.IsSpawned)
-            {
-                networkObject.TryRemoveParent();
-            }
 
             return true;
         }
 
-        public bool TryRelease()
+        private Vector3 GetRandomDropPosition()
         {
-            if (currentSupply == null)
-                return false;
+            Vector2 randomOffset = Random.insideUnitCircle * dropRadius;
 
-            if (!player.IsServer)
-                return false;
+            return transform.position + new Vector3(randomOffset.x, randomOffset.y, 0f);
+        }
 
-            Supply supply = currentSupply;
-            currentSupply = null;
+        private void OnDataChanged(SupplyData previous, SupplyData current)
+        {
+            RefreshVisual();
+        }
 
-            if (supply.IsSpawned)
+        private void RefreshVisual()
+        {
+            if (pickedIcon == null)
+                return;
+
+            if (!IsCarrying)
             {
-                supply.NetworkObject.TryRemoveParent();
+                pickedIcon.enabled = false;
+                pickedIcon.sprite = null;
+                return;
             }
 
-            supply.Release();
+            SupplySO definition = SupplyCollection.Singleton.GetSupply(Data.Value.ToString());
 
-            return true;
+            if (definition == null)
+            {
+                pickedIcon.enabled = false;
+                pickedIcon.sprite = null;
+                return;
+            }
+
+            pickedIcon.sprite = definition.Icon;
+            pickedIcon.enabled = true;
         }
     }
 }
