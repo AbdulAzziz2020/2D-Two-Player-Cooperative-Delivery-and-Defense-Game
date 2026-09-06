@@ -30,6 +30,13 @@ namespace Game
         private void Awake()
         {
             Singleton = this;
+
+            if (spawnPoints.Length < maxPlayers)
+            {
+                Debug.LogError(
+                    $"Spawn points ({spawnPoints.Length}) " +
+                    $"must be >= max players ({maxPlayers}).");
+            }
         }
 
         public override void OnDestroy()
@@ -218,20 +225,9 @@ namespace Game
             if (client.PlayerObject != null)
                 return;
 
-            Vector3 position = GetRandomSpawnPosition();
-
+            Vector3 position = spawnPoints[^1].position;
             NetworkObject player = Instantiate(playerPrefab, position, Quaternion.identity);
             player.SpawnAsPlayerObject(clientId, true);
-        }
-
-        private Vector3 GetRandomSpawnPosition()
-        {
-            if (spawnPoints == null || spawnPoints.Length == 0)
-                return Vector3.zero;
-
-            int index = UnityEngine.Random.Range(0, spawnPoints.Length);
-
-            return spawnPoints[index].position;
         }
     }
 }

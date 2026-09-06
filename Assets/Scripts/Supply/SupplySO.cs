@@ -8,6 +8,7 @@ namespace Game
     {
         [SerializeField] private string id;
         [SerializeField] private string displayName;
+        [SerializeField] private int quantity = 10;
 
         [SerializeField] private Sprite icon;
         
@@ -18,7 +19,7 @@ namespace Game
 
         public SupplyData Create()
         {
-            return new SupplyData(id);
+            return new SupplyData(id, 10);
         }
     }
 }

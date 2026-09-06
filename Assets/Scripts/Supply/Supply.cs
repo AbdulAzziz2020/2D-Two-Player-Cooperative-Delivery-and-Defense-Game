@@ -45,9 +45,6 @@ namespace Game
 
         public void PrepareSpawn(SupplyData data)
         {
-            if (!IsServer)
-                return;
-            
             pendingSupply = data;
             
             Debug.Log("Prepare Spawn Supply: " + data);

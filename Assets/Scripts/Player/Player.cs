@@ -98,59 +98,54 @@ namespace Game
 
         private void OnInteract()
         {
-            if (pickup == null)
+            if (pickup == null || interactor == null)
             {
-                return;
-            }
-
-            if (pickup.IsCarrying)
-            {
-                pickup.TryDrop();
-                return;
-            }
-
-            if (interactor == null)
-            {
+                TryDrop();
                 return;
             }
 
             if (!interactor.TryGetTarget(out IInteractable target))
             {
+                TryDrop();
                 return;
             }
-            
+
             if (target is not Component component)
+            {
+                return;
+            }
+
+            if (!target.CanInteract(this))
             {
                 return;
             }
 
             NetworkObject networkObject = component.GetComponent<NetworkObject>();
 
-            if (networkObject == null)
+            if (networkObject == null || !networkObject.IsSpawned)
             {
                 return;
             }
 
-            if (!networkObject.IsSpawned)
-            {
-                return;
-            }
-
-            SendInteractToServerRpc(networkObject.NetworkObjectId);
+            SendInteractToServerRpc(networkObject);
         }
 
-        [Rpc(SendTo.Server)]
-        private void SendInteractToServerRpc(ulong networkObjectId)
+        private void TryDrop()
         {
-            if (NetworkManager.Singleton == null)
+            if (!pickup.IsCarrying)
             {
                 return;
             }
 
-            if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out NetworkObject networkObject))
-            {
+            pickup.TryDrop();
+        }
+
+
+        [Rpc(SendTo.Server)]
+        private void SendInteractToServerRpc(NetworkObjectReference objectReference)
+        {
+            if (!objectReference.TryGet(out NetworkObject networkObject))
                 return;
-            }
             
             IInteractable interactable = networkObject.GetComponent<IInteractable>();
 
@@ -181,7 +176,7 @@ namespace Game
     public interface IInteractable
     {
         void SetHighlight(bool isHighlighted);
-        bool CanInteract(Player owner);
+        bool CanInteract(Player player);
         void Interact(Player player);
     }
 }

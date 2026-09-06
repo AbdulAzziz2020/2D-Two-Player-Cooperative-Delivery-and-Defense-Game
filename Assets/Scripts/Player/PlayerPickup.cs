@@ -159,5 +159,33 @@ namespace Game
             pickedIcon.sprite = definition.Icon;
             pickedIcon.enabled = true;
         }
+
+        public void TryDropToWarehouse(Warehouse warehouse)
+        {
+            if (!IsCarrying)
+                return;
+            
+            RequestStoreToWarehouseRpc(new NetworkObjectReference(warehouse.NetworkObject));
+        }
+
+        [Rpc(SendTo.Server)]
+        private void RequestStoreToWarehouseRpc(NetworkObjectReference warehouseRef)
+        {
+            if (!IsCarrying)
+                return;
+
+            if (!warehouseRef.TryGet(out NetworkObject networkObject))
+                return;
+            
+            Warehouse warehouse = networkObject.GetComponent<Warehouse>();
+            if (warehouse == null)
+                return;
+            
+            if (!Data.Value.IsValid)
+                return;
+            
+            warehouse.UpdateCapacity(Data.Value);
+            Data.Value = SupplyData.Empty;
+        }
     }
 }
