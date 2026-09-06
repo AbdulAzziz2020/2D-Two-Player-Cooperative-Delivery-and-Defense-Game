@@ -29,6 +29,7 @@ namespace Game
         public void NetworkSerialize<T>( BufferSerializer<T> serializer) where T : IReaderWriter
         {
             serializer.SerializeValue(ref supplyId);
+            serializer.SerializeValue(ref quantity);
         }
 
         public bool Equals(SupplyData other)

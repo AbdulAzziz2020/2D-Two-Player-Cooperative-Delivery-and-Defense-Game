@@ -125,7 +125,7 @@ CircleCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -150,7 +150,7 @@ MonoBehaviour:
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
-  m_InScenePlaced: 1
+  m_InScenePlaced: 0
   ActiveSceneSynchronization: 0
   SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
@@ -172,7 +172,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game::Game.Supply
   ShowTopMostFoldoutHeaderGroup: 1
   icon: {fileID: 6481141330203454197}
-  definition: {fileID: 0}
 --- !u!114 &4713826666133551355
 MonoBehaviour:
   m_ObjectHideFlags: 0

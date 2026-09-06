@@ -48,15 +48,25 @@ namespace Game
             interactor.Initialize(this);
 
             if (!IsOwner)
+            {
+                Collider2D collider = GetComponent<Collider2D>();
+                if (collider != null)
+                {
+                    collider.enabled = false;
+                }
                 return;
-
+            }
+            
             input.Move += OnMove;
             input.Interact += OnInteract;
 
-            GamePhase.Singleton.PhaseRequest.OnValueChanged +=
-                HandlePhaseRequest;
+            GamePhase.Singleton.PhaseRequest.OnValueChanged += HandlePhaseRequest;
+            CameraFollow.Singleton.Set(transform);
 
-            input.Enable();
+            if (!GamePhase.Singleton.PhaseRequest.Value.isPause)
+            {
+                input.Enable();
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -66,8 +76,7 @@ namespace Game
                 input.Move -= OnMove;
                 input.Interact -= OnInteract;
 
-                GamePhase.Singleton.PhaseRequest.OnValueChanged -=
-                    HandlePhaseRequest;
+                GamePhase.Singleton.PhaseRequest.OnValueChanged -= HandlePhaseRequest;
 
                 input.Dispose();
             }
@@ -75,9 +84,7 @@ namespace Game
             base.OnNetworkDespawn();
         }
 
-        private void HandlePhaseRequest(
-            PauseRequest previousValue,
-            PauseRequest newValue)
+        private void HandlePhaseRequest(PauseRequest previousValue, PauseRequest newValue)
         {
             if (newValue.isPause)
                 input.Disable();
@@ -87,15 +94,12 @@ namespace Game
 
         private void OnMove(Vector2 input)
         {
-            SendMoveInputToServerRpc(input);
-        }
-
-        [Rpc(SendTo.Server)]
-        private void SendMoveInputToServerRpc(Vector2 input)
-        {
+            if (!IsOwner)
+                return;
+            
             movement.SetInput(input);
         }
-
+        
         private void OnInteract()
         {
             if (pickup == null || interactor == null)
@@ -166,17 +170,10 @@ namespace Game
 
         private void FixedUpdate()
         {
-            if (!IsServer)
+            if (!IsOwner)
                 return;
 
             movement.Process();
         }
-    }
-
-    public interface IInteractable
-    {
-        void SetHighlight(bool isHighlighted);
-        bool CanInteract(Player player);
-        void Interact(Player player);
     }
 }

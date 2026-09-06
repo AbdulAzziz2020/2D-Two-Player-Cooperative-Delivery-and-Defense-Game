@@ -4,28 +4,15 @@ using UnityEngine;
 
 namespace Game.UI
 {
-    public class CautionPresenter : UIPresenter<CautionView>
+    public class MessagePresenter : UIPresenter<MessageView>
     {
-        public static event Action OnDisconnected;
-        
         private void Start()
         {
             view.Disconnect += HandleClientDisconnect;
             
             GamePhase.Singleton.PhaseRequest.OnValueChanged += HandlePhaseChanged;
-            GameSession.Singleton.Players.OnListChanged += HandlePlayersChanged;
+            GameSession.Singleton.Players.OnListChanged += HandleListChanged;
             NetworkManager.Singleton.OnClientDisconnectCallback += HandleClientDisconnect;
-        }
-        
-        private void HandleClientDisconnect(ulong clientId)
-        {
-            if (clientId == NetworkManager.ServerClientId)
-            {
-                Debug.LogWarning("Host disconnected!"); 
-                return;
-            }
-
-            Debug.Log($"Client {clientId} disconnected.");
         }
 
         private void OnDestroy()
@@ -36,32 +23,40 @@ namespace Game.UI
             {
                 GamePhase.Singleton.PhaseRequest.OnValueChanged -= HandlePhaseChanged;
             }
-            
+
             if (GameSession.Singleton != null)
             {
-                GameSession.Singleton.Players.OnListChanged -= HandlePlayersChanged;
+                GameSession.Singleton.Players.OnListChanged -= HandleListChanged;
+            }
+            
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientDisconnectCallback -= HandleClientDisconnect;
             }
         }
         
-        private void HandlePlayersChanged(NetworkListEvent<PlayerSession> changeEvent)
+        private void HandleClientDisconnect(ulong clientId)
         {
-            Debug.Log("Event: " + changeEvent.Type);
-            
-            switch (changeEvent.Type)
+            if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.ClosedByRemote)
             {
-                case NetworkListEvent<PlayerSession>.EventType.RemoveAt:
-                    HandlePlayerDisconnected(changeEvent.Value);
-                    break;
+                view.SetMessage(MessageResponse.SERVER_CLOSED);
+                return;
             }
-        }
-
-        private void HandlePlayerDisconnected(PlayerSession playerSession)
-        {
-            Debug.Log("[MessagePresenter-HandlePlayerDisconnected] Game is not paused.");
+            
             view.Hide();
         }
 
+        private void HandleListChanged(NetworkListEvent<PlayerSession> changeEvent)
+        {
+            PhaseChanged(GamePhase.Singleton.PhaseRequest.Value);
+        }
+        
         private void HandlePhaseChanged(PauseRequest oldRequest, PauseRequest newRequest)
+        {
+            PhaseChanged(newRequest);
+        }
+
+        private void PhaseChanged(PauseRequest newRequest)
         {
             if (!newRequest.isPause)
             {
@@ -77,7 +72,6 @@ namespace Game.UI
             }
 
             view.SetMessage(!newRequest.IsHost() ? "Paused by other player." : "Paused by host.");
-
             view.Show();
         }
 
@@ -86,9 +80,9 @@ namespace Game.UI
             if (NetworkManager.Singleton.IsListening)
             {
                 NetworkManager.Singleton.Shutdown();
-                view.Hide();
-                OnDisconnected?.Invoke();
             }
+            
+            view.Hide();
         }
     }
 }

@@ -8,33 +8,35 @@ namespace Game.UI
         {
             view.Pause += HandlePause;
 
-            GameSession.Singleton.Players.OnListChanged += HandlePlayersChanged;
-            CautionPresenter.OnDisconnected += view.Hide;
-            PausePresenter.Disconnected += view.Hide;
+            NetworkManager.Singleton.OnClientConnectedCallback += HandleConnect;
+            NetworkManager.Singleton.OnClientDisconnectCallback += HandleDisconnect;
         }
 
         private void OnDestroy()
         {
             view.Pause -= HandlePause;
-            if(GameSession.Singleton != null)
-                GameSession.Singleton.Players.OnListChanged -= HandlePlayersChanged;
-            
-            CautionPresenter.OnDisconnected -= view.Hide;
-            PausePresenter.Disconnected -= view.Hide;
+
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientDisconnectCallback -= HandleDisconnect;
+                NetworkManager.Singleton.OnClientConnectedCallback -= HandleConnect;
+            }
         }
 
-        private void HandlePlayersChanged(NetworkListEvent<PlayerSession> changeEvent)
+        private void HandleConnect(ulong clientId)
         {
-            switch (changeEvent.Type)
+            if (clientId != NetworkManager.Singleton.LocalClientId)
+                return;
+            
+            view.Show();
+        } 
+
+        private void HandleDisconnect(ulong clientId)
+        {
+            if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.TransportShutdown
+                || clientId == NetworkManager.Singleton.LocalClientId)
             {
-                case NetworkListEvent<PlayerSession>.EventType.Add:
-                    if(changeEvent.Value.clientId == NetworkManager.Singleton.LocalClientId)
-                        view.Show();
-                    break;
-                case NetworkListEvent<PlayerSession>.EventType.RemoveAt:
-                    if(changeEvent.Value.clientId == NetworkManager.Singleton.LocalClientId)
-                        view.Hide();
-                    break;
+                view.Hide();
             }
         }
 

@@ -1,5 +1,6 @@
 using System;
 using Unity.Netcode;
+using UnityEngine;
 
 namespace Game.UI
 {
@@ -10,8 +11,20 @@ namespace Game.UI
             GameSession.Singleton.Players.OnListChanged += HandleListChanged;
             GamePhase.Singleton.Phase.OnValueChanged += HandlePhaseChanged;
             
-            CautionPresenter.OnDisconnected += view.Hide;
-            PausePresenter.Disconnected += view.Hide;
+            NetworkManager.Singleton.OnClientDisconnectCallback += HandleDisconnect;
+        }
+
+        private void HandleCountdownChanged(int previousValue, int newValue)
+        {
+            view.SetStateText("Game running in " + newValue);
+        }
+
+        private void HandleDisconnect(ulong clientId)
+        {
+            if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.TransportShutdown || NetworkManager.Singleton.LocalClientId == clientId)
+            {
+                view.Hide();
+            }
         }
 
         private void OnDestroy()
@@ -25,9 +38,11 @@ namespace Game.UI
             {
                 GamePhase.Singleton.Phase.OnValueChanged -= HandlePhaseChanged;
             }
-            
-            CautionPresenter.OnDisconnected -= view.Hide;
-            PausePresenter.Disconnected -= view.Hide;
+
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientDisconnectCallback -= HandleDisconnect;
+            }
         }
 
         private void HandlePhaseChanged(GamePhaseType previousValue, GamePhaseType newValue)
@@ -36,6 +51,7 @@ namespace Game.UI
             {
                 GamePhaseType.Waiting => "Waiting for other player",
                 GamePhaseType.Running => "Game is Running",
+                GamePhaseType.Paused => "Game is Paused",
                 _ => String.Empty
             };
             

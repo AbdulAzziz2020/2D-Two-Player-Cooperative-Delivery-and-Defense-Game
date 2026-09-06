@@ -105,7 +105,6 @@ namespace Game
             var dropPosition = GetRandomDropPosition();
             SupplySpawner.Singleton.SpecificSpawn(dropPosition, data);
 
-            // Item sudah berhasil dikembalikan ke world.
             Data.Value = SupplyData.Empty;
         }
 

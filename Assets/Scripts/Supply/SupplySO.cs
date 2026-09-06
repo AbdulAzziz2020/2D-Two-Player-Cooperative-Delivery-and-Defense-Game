@@ -19,7 +19,7 @@ namespace Game
 
         public SupplyData Create()
         {
-            return new SupplyData(id, 10);
+            return new SupplyData(id, quantity);
         }
     }
 }

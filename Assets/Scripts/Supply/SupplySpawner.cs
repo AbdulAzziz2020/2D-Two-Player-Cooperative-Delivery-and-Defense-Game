@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,7 +11,7 @@ namespace Game
     {
         [Header("Spawn")]
         [SerializeField] private Supply prefab;
-        [SerializeField] private float spawnInterval = 2f;
+        [SerializeField] private float spawnInterval = 5f;
         [SerializeField] private float spawnRadius = 5f;
         [SerializeField] private float spawnCheckRadius = 0.5f;
         [SerializeField] private LayerMask collisionMask;
@@ -19,6 +20,7 @@ namespace Game
         [Header("Pool")]
         [SerializeField] private int poolDefaultCapacity = 10;
         [SerializeField] private int poolMaxSize = 50;
+        [SerializeField] private List<Supply> activeSupplies = new();
 
         [Header("Debug")]
         [SerializeField] private bool drawGizmos = true;
@@ -26,12 +28,13 @@ namespace Game
         private ObjectPool<Supply> pool;
 
         private float spawnTimer;
+
         public static SupplySpawner Singleton { get; private set; }
-        
+
         private void Awake()
         {
             Singleton = this;
-            
+
             pool = new ObjectPool<Supply>(
                 CreateSupply,
                 OnGetSupply,
@@ -50,27 +53,53 @@ namespace Game
             if (!IsServer)
                 return;
 
-            spawnTimer = spawnInterval;
+            spawnTimer = 0f;
         }
 
         public override void OnNetworkDespawn()
         {
-            if (pool != null)
+            if (IsServer)
             {
-                pool.Clear();
+                Reset();
             }
 
             base.OnNetworkDespawn();
         }
 
+        public override void OnDestroy()
+        {
+            pool?.Clear();
+
+            if (Singleton == this)
+                Singleton = null;
+
+            base.OnDestroy();
+        }
+
+        public void Reset()
+        {
+            if (!IsServer)
+                return;
+
+            spawnTimer = 0f;
+
+            for (int i = activeSupplies.Count - 1; i >= 0; i--)
+            {
+                ReleaseSupply(activeSupplies[i]);
+            }
+
+            activeSupplies.Clear();
+        }
+
         private void Update()
         {
-            if (true) return;
-            
             if (!IsServer)
                 return;
 
             if (!IsSpawned)
+                return;
+
+            if (GamePhase.Singleton.Phase.Value != GamePhaseType.Running)
                 return;
 
             spawnTimer += Time.deltaTime;
@@ -93,28 +122,46 @@ namespace Game
                 return false;
 
             Supply supply = pool.Get();
-            SupplySO supplySo = SupplyCollection.Singleton.GetRandomSupply();
+
+            SupplySO supplySo =
+                SupplyCollection.Singleton.GetRandomSupply();
 
             SupplyData supplyData = supplySo.Create();
+
             supply.PrepareSpawn(supplyData);
-            supply.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
+
+            supply.transform.SetPositionAndRotation(
+                spawnPosition,
+                Quaternion.identity
+            );
+
             supply.NetworkObject.Spawn();
+
+            activeSupplies.Add(supply);
 
             return true;
         }
 
-        public void SpecificSpawn(Vector3 spawnPosition, SupplyData data)
+        public void SpecificSpawn(
+            Vector3 spawnPosition,
+            SupplyData data)
         {
             if (!IsServer)
                 return;
-            
+
             Supply supply = pool.Get();
-            supply.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
+
+            supply.transform.SetPositionAndRotation(
+                spawnPosition,
+                Quaternion.identity
+            );
 
             supply.PrepareSpawn(data);
-            
+
             supply.NetworkObject.Spawn();
-        } 
+
+            activeSupplies.Add(supply);
+        }
 
         private Supply CreateSupply()
         {
@@ -136,7 +183,11 @@ namespace Game
             supply.gameObject.SetActive(false);
 
             supply.transform.SetParent(transform, false);
-            supply.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+            supply.transform.SetLocalPositionAndRotation(
+                Vector3.zero,
+                Quaternion.identity
+            );
         }
 
         private void OnDestroySupply(Supply supply)
@@ -150,6 +201,16 @@ namespace Game
         {
             if (!IsServer)
                 return;
+
+            ReleaseSupply(supply);
+        }
+
+        private void ReleaseSupply(Supply supply)
+        {
+            if (supply == null)
+                return;
+
+            activeSupplies.Remove(supply);
 
             if (supply.IsSpawned)
             {
@@ -201,15 +262,8 @@ namespace Game
             if (!drawGizmos)
                 return;
 
-            Gizmos.DrawWireSphere(
-                transform.position,
-                spawnRadius
-            );
-
-            Gizmos.DrawWireSphere(
-                transform.position,
-                spawnCheckRadius
-            );
+            Gizmos.DrawWireSphere(transform.position, spawnRadius);
+            Gizmos.DrawWireSphere(transform.position, spawnCheckRadius);
         }
     }
 }

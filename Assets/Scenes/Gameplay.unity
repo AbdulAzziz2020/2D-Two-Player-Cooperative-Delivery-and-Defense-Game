@@ -651,6 +651,93 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 185843426}
   m_CullTransparentMesh: 1
+--- !u!1 &220234348
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 220234351}
+  - component: {fileID: 220234349}
+  - component: {fileID: 220234350}
+  m_Layer: 0
+  m_Name: Game Entities
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &220234349
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 220234348}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 1910227750
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &220234350
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 220234348}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 925cf70b9af344c8a2cf980e8ee7152c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game::Game.GameEntities
+  ShowTopMostFoldoutHeaderGroup: 1
+  warehouse: {fileID: 748655271}
+  prefab: {fileID: 2394539384643401699, guid: 24fa985e6a488b14b9d3770d7a306cc8, type: 3}
+  maxThreats: 5
+  spawnInterval: 60
+  spawnRadius: 5
+  spawnCheckRadius: 0.5
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 448
+  maxSpawnAttempts: 20
+  poolDefaultCapacity: 10
+  poolMaxSize: 50
+  activeThreats: []
+  drawGizmos: 1
+--- !u!4 &220234351
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 220234348}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &255221744
 GameObject:
   m_ObjectHideFlags: 0
@@ -1297,6 +1384,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1422,6 +1510,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68e2c841042a4992992e7a70bc28fbde, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game::Game.CameraFollow
+  smoothSpeed: 1000
 --- !u!1 &520637213
 GameObject:
   m_ObjectHideFlags: 0
@@ -2553,15 +2654,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game::Game.SupplySpawner
   ShowTopMostFoldoutHeaderGroup: 1
   prefab: {fileID: 4169991527382640645, guid: 0f16bcd2247309b4ba084e73082f181f, type: 3}
-  spawnInterval: 2
+  spawnInterval: 15
   spawnRadius: 5
   spawnCheckRadius: 0.5
   collisionMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 448
   maxSpawnAttempts: 20
   poolDefaultCapacity: 10
   poolMaxSize: 50
+  activeSupplies: []
   drawGizmos: 1
 --- !u!4 &660502592
 Transform:
@@ -6844,4 +6946,5 @@ SceneRoots:
   - {fileID: 972984663}
   - {fileID: 660502592}
   - {fileID: 1174101032}
+  - {fileID: 220234351}
   - {fileID: 748655274}

@@ -11,11 +11,11 @@ namespace Game
         [SerializeField] private NetworkRigidbody2D rb;
         [SerializeField] private float moveSpeed = 5f;
 
-        [SerializeField] private NetworkVariable<Vector2> moveInput = new();
-        [SerializeField] private NetworkVariable<Vector2> facingDirection = new(Vector2.down);
+        private Vector2 moveInput;
+        private Vector2 facingDirection = Vector2.down;
 
-        public Vector2 MoveInput => moveInput.Value;
-        public Vector2 FacingDirection => facingDirection.Value;
+        public Vector2 MoveInput => moveInput;
+        public Vector2 FacingDirection => facingDirection;
 
         private void Awake()
         {
@@ -29,22 +29,22 @@ namespace Game
 
         public void SetInput(Vector2 input)
         {
-            moveInput.Value = input;
+            moveInput = input;
 
             if (input.sqrMagnitude > 0.0001f)
             {
-                facingDirection.Value = input.normalized;
+                facingDirection = input.normalized;
             }
         }
 
         public void Process()
         {
-            rb.Rigidbody2D.linearVelocity = moveInput.Value * moveSpeed;
+            rb.Rigidbody2D.linearVelocity = moveInput * moveSpeed;
         }
 
         public void Stop()
         {
-            moveInput.Value = Vector2.zero;
+            moveInput = Vector2.zero;
             rb.Rigidbody2D.linearVelocity = Vector2.zero;
         }
     }

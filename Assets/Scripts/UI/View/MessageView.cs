@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace Game.UI
 {
-    public class CautionView : UIView
+    public class MessageView : UIView
     {
         [SerializeField] private TMP_Text message;
         [SerializeField] private Button disconnect;

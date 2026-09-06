@@ -15,61 +15,44 @@ namespace Game.UI
             view.Client += HandleClient;
             view.NameChanged += HandleNameChanged;
 
-            GameSession.Singleton.Players.OnListChanged += HandlePlayersChanged;
-            CautionPresenter.OnDisconnected += view.Show;
-            PausePresenter.Disconnected += view.Show;
-
+            NetworkManager.Singleton.OnClientDisconnectCallback += HandleDisconnect;
+            NetworkManager.Singleton.OnClientConnectedCallback += HandleConnect;
+            
             view.Show();
         }
 
+      
         private void OnDestroy()
         {
             view.Host -= HandleHost;
             view.Client -= HandleClient;
             view.NameChanged -= HandleNameChanged;
-            CautionPresenter.OnDisconnected -= view.Show;
-            PausePresenter.Disconnected -= view.Show;
 
-            if (GameSession.Singleton != null)
+            if (NetworkManager.Singleton != null)
             {
-                GameSession.Singleton.Players.OnListChanged -= HandlePlayersChanged;
+                NetworkManager.Singleton.OnClientDisconnectCallback -= HandleDisconnect;
+                NetworkManager.Singleton.OnClientConnectedCallback -= HandleConnect;
             }
         }
-
-        private void HandlePlayersChanged(NetworkListEvent<PlayerSession> changeEvent)
+        
+        private void HandleConnect(ulong obj)
         {
-            switch (changeEvent.Type)
-            {
-                case NetworkListEvent<PlayerSession>.EventType.Add:
-                    HandlePlayerConnected(changeEvent.Value);
-                    break;
-
-                case NetworkListEvent<PlayerSession>.EventType.RemoveAt:
-                    HandlePlayerDisconnected(changeEvent.Value);
-                    break;
-            }
-        }
-
-        private void HandlePlayerDisconnected(PlayerSession playerSession)
-        {
-            if (playerSession.clientId != NetworkManager.Singleton.LocalClientId)
-                return;
-            
-            playerName = String.Empty;
-            
-            view.SetButtons(true);
-            view.Show();
-            
-        }
-
-        private void HandlePlayerConnected(PlayerSession playerSession)
-        {
-            if (playerSession.clientId != NetworkManager.Singleton.LocalClientId)
+            if(obj != NetworkManager.Singleton.LocalClientId)
                 return;
             
             view.Hide();
         }
-
+        
+        private void HandleDisconnect(ulong clientId)
+        {
+            if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.TransportShutdown ||
+                clientId == NetworkManager.Singleton.LocalClientId)
+            {
+                view.Show();
+                view.SetButtons(true);
+            }
+        }
+        
         private void HandleNameChanged(string value)
         {
             playerName = value;
@@ -77,17 +60,26 @@ namespace Game.UI
 
         private void HandleHost()
         {
-            if (string.IsNullOrWhiteSpace(playerName))
-                return;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(playerName))
+                    return;
 
-            NetworkManager networkManager = NetworkManager.Singleton;
-            networkManager.NetworkConfig.ConnectionData = CreateConnectionData();
+                NetworkManager networkManager = NetworkManager.Singleton;
+                networkManager.NetworkConfig.ConnectionData = CreateConnectionData();
 
-            bool success = networkManager.StartHost();
+                bool success = networkManager.StartHost();
 
-            view.SetButtons(false);
-
-            Debug.Log($"Host started: {success}");
+                view.SetButtons(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+            finally
+            {
+                view.SetButtons(true);
+            }
         }
 
         private void HandleClient()

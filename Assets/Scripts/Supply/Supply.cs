@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Game
 {
-    public class Supply : NetworkBehaviour, IInteractable
+    public class Supply : NetworkBehaviour, IInteractable, IDamagable
     {
         [SerializeField] private SpriteRenderer icon;
         
@@ -120,6 +120,14 @@ namespace Game
         public void Interact(Player player)
         {
             player.Pickup.TryPickup(this);
+        }
+
+        public void TakeDamage()
+        {
+            if (!IsServer)
+                return;
+
+            NetworkObject.Despawn(false);
         }
     }
 }

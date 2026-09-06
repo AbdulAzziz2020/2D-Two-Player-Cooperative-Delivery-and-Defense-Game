@@ -39,53 +39,52 @@ namespace Game
             }
         }
 
-        public override void OnDestroy()
-        {
-            if (Singleton == this)
-            {
-                Singleton = null;
-            }
-        }
-
-        public void Logout()
-        {
-            if (NetworkManager.Singleton == null)
-                return;
-
-            if (NetworkManager.IsListening)
-            {
-                NetworkManager.Singleton.Shutdown();
-            }
-        }
-
         private void Start()
         {
-            RegisterNetworkCallbacks();
+            NetworkManager.Singleton.ConnectionApprovalCallback += ApprovalCheck;
         }
 
-        private void RegisterNetworkCallbacks()
+        public override void OnDestroy()
         {
-            if (NetworkManager.Singleton == null)
-                return;
+            if (NetworkManager.Singleton != null)
+                NetworkManager.Singleton.ConnectionApprovalCallback -= ApprovalCheck;
+        }
 
-            NetworkManager.Singleton.ConnectionApprovalCallback += ApprovalCheck;
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            
+            RegisterNetworkCallbacks();
         }
         
         public override void OnNetworkDespawn()
         {
             UnregisterNetworkCallbacks();
 
+            if (IsServer)
+            {
+                Debug.Log("Game Session Rilis");
+                pendingPlayers.Clear();
+                Players.Clear();
+            }
+
             base.OnNetworkDespawn();
         }
-
+        
+        private void RegisterNetworkCallbacks()
+        {
+            if (NetworkManager.Singleton == null)
+                return;
+            
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        }
+        
         private void UnregisterNetworkCallbacks()
         {
             if (NetworkManager.Singleton == null)
                 return;
-
-            NetworkManager.Singleton.ConnectionApprovalCallback -= ApprovalCheck;
+            
             NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
         }
@@ -182,13 +181,11 @@ namespace Game
         
         private void OnClientDisconnected(ulong clientId)
         {
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
+            if (IsServer)
             {
-                return;
+                pendingPlayers.Remove(clientId);
+                RemovePlayer(clientId);
             }
-
-            pendingPlayers.Remove(clientId);
-            RemovePlayer(clientId);
         }
         
         private void RemovePlayer(ulong clientId)
@@ -225,7 +222,7 @@ namespace Game
             if (client.PlayerObject != null)
                 return;
 
-            Vector3 position = spawnPoints[^1].position;
+            Vector3 position = spawnPoints[Players.Count - 1].position;
             NetworkObject player = Instantiate(playerPrefab, position, Quaternion.identity);
             player.SpawnAsPlayerObject(clientId, true);
         }
