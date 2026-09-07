@@ -10,6 +10,7 @@ namespace Game.UI
         [SerializeField] private TMP_InputField inputName;
         [SerializeField] private Button hostButton;
         [SerializeField] private Button clientButton;
+        [SerializeField] private TMP_Text messageText;
 
         public event Action Host;
         public event Action Client;
@@ -37,6 +38,18 @@ namespace Game.UI
             SetButtons(true);
         }
 
+        public void SetMessage(string message)
+        {
+            messageText.text = message;
+            messageText.gameObject.SetActive(true);
+        }
+
+        public void HideMessage()
+        {
+            messageText.gameObject.SetActive(false);
+            messageText.text = "";
+        }
+
         public void SetButtons(bool enabled)
         {
             hostButton.interactable = enabled;
@@ -56,6 +69,16 @@ namespace Game.UI
         private void HandleNameChanged(string value)
         {
             NameChanged?.Invoke(value);
+        }
+
+        public void SetHostButtonText(string hostButtonText)
+        {
+            hostButton.GetComponentInChildren<TMP_Text>().text = hostButtonText;
+        }
+
+        public void SetClientButtonText(string clientButtonText)
+        {
+            clientButton.GetComponentInChildren<TMP_Text>().text = clientButtonText;
         }
     }
 }

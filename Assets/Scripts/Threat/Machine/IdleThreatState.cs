@@ -5,6 +5,8 @@ namespace Game
 {
     public class IdleThreatState : BaseState<Threat, ThreatState>
     {
+        private const int IDLE_DELAY = 2000;
+
         public IdleThreatState(
             Threat entity,
             StateMachine<Threat, ThreatState> stateMachine)
@@ -16,7 +18,7 @@ namespace Game
 
         public override async void Enter()
         {
-            await UniTask.Delay(2000);
+            await UniTask.Delay(IDLE_DELAY);
 
             if (Entity == null)
                 return;
@@ -24,7 +26,7 @@ namespace Game
             if (!Entity.IsServer)
                 return;
 
-            if (Entity.TryFindSupply())
+            if (Entity.TryFindTarget())
             {
                 Entity.ChangeState(ThreatState.Attack);
                 return;

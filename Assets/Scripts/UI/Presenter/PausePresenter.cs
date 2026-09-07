@@ -14,7 +14,6 @@ namespace Game.UI
             GamePhase.Singleton.PhaseRequest.OnValueChanged += HandlePhaseChanged;
             NetworkManager.Singleton.OnClientDisconnectCallback += HandleClientDisconnect;
         }
-        
 
         private void HandleClientDisconnect(ulong clientId)
         {

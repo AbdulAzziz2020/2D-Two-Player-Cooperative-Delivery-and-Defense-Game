@@ -18,8 +18,7 @@ namespace Game
             if (!IsServer)
                 return;
 
-            target = (Vector2)transform.position +
-                     UnityEngine.Random.insideUnitCircle * radius;
+            target = (Vector2)transform.position + UnityEngine.Random.insideUnitCircle * radius;
 
             isComplete = false;
         }

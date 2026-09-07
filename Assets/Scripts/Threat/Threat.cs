@@ -5,13 +5,13 @@ using UnityEngine;
 
 namespace Game
 {
-    [RequireComponent(typeof(ThreatSupplyFinder))]
+    [RequireComponent(typeof(ThreatTargetFinder))]
     [RequireComponent(typeof(ThreatPatrol))]
     public class Threat : NetworkBehaviour
     {
         private ThreatStateMachine machine;
 
-        private ThreatSupplyFinder supplyFinder;
+        private ThreatTargetFinder _targetFinder;
         private ThreatPatrol patrol;
 
         private NetworkVariable<ThreatState> state = new();
@@ -29,7 +29,7 @@ namespace Game
         {
             machine = new ThreatStateMachine();
 
-            supplyFinder = GetComponent<ThreatSupplyFinder>();
+            _targetFinder = GetComponent<ThreatTargetFinder>();
             patrol = GetComponent<ThreatPatrol>();
         }
 
@@ -67,14 +67,11 @@ namespace Game
             stateText.text = state.Value.ToString();
         }
 
-        public bool TryFindSupply()
-        {
-            return supplyFinder.TryFindSupply();
-        }
+        public NetworkObject TargetObject => _targetFinder.TargetObject;
 
-        public bool TryGetSupply(out Supply supply)
+        public bool TryFindTarget()
         {
-            return supplyFinder.TryGetTarget(out supply);
+            return _targetFinder.TryFindTarget();
         }
 
         public void StartPatrol()
@@ -121,6 +118,11 @@ namespace Game
 
             machine.ChangeState(newState);
             state.Value = newState;
+        }
+
+        public void TakeDamage()
+        {
+            ChangeState(ThreatState.Die);
         }
     }
 }

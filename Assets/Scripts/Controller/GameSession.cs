@@ -44,31 +44,61 @@ namespace Game
             NetworkManager.Singleton.ConnectionApprovalCallback += ApprovalCheck;
         }
 
-        public override void OnDestroy()
-        {
-            if (NetworkManager.Singleton != null)
-                NetworkManager.Singleton.ConnectionApprovalCallback -= ApprovalCheck;
-        }
-
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            
+
             RegisterNetworkCallbacks();
+
+            if (IsServer)
+            {
+                InitializeServer();
+            }
         }
-        
+
         public override void OnNetworkDespawn()
         {
             UnregisterNetworkCallbacks();
 
+            ResetLocal();
+
             if (IsServer)
             {
-                Debug.Log("Game Session Rilis");
-                pendingPlayers.Clear();
-                Players.Clear();
+                ResetServer();
             }
 
             base.OnNetworkDespawn();
+        }
+
+        public override void OnDestroy()
+        {
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.ConnectionApprovalCallback -= ApprovalCheck;
+            }
+
+            if (Singleton == this)
+            {
+                Singleton = null;
+            }
+
+            base.OnDestroy();
+        }
+        
+        private void InitializeServer()
+        {
+            Players.Clear();
+        }
+
+        private void ResetLocal()
+        {
+            pendingPlayers.Clear();
+        }
+
+        private void ResetServer()
+        {
+            pendingPlayers.Clear();
+            Players.Clear();
         }
         
         private void RegisterNetworkCallbacks()

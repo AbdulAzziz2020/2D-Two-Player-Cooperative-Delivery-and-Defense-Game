@@ -9,11 +9,10 @@ namespace Game
     {
         [Header("Warehouse")]
         [SerializeField] private Warehouse warehouse;
-        
+
         [Header("Threats")]
         [SerializeField] private Threat prefab;
-        [SerializeField] private int maxThreats;
-        [SerializeField] private float spawnInterval = 60f;
+        [SerializeField] private float spawnInterval = 30f;
         [SerializeField] private float spawnRadius = 5f;
         [SerializeField] private float spawnCheckRadius = 0.5f;
         [SerializeField] private LayerMask collisionMask;
@@ -23,62 +22,79 @@ namespace Game
         [SerializeField] private int poolDefaultCapacity = 10;
         [SerializeField] private int poolMaxSize = 50;
         [SerializeField] private List<Threat> activeThreats;
-        
+
         [Header("Debug")]
         [SerializeField] private bool drawGizmos = true;
-        
+
         private ObjectPool<Threat> pool;
-        
+
         private float spawnTimer;
+
         public static GameEntities Singleton { get; private set; }
-        
+
         private void Awake()
         {
             Singleton = this;
-            
+
+            activeThreats ??= new List<Threat>();
+
             pool = new ObjectPool<Threat>(
-                CreateSupply,
-                OnGetSupply,
-                OnReleaseSupply,
-                OnDestroySupply,
+                CreateThreat,
+                OnGetThreat,
+                OnReleaseThreat,
+                OnDestroyThreat,
                 collectionCheck: true,
                 defaultCapacity: poolDefaultCapacity,
                 maxSize: poolMaxSize
             );
         }
-        
+
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
 
-            if (!IsServer)
-                return;
-
-            spawnTimer = spawnInterval;
+            if (IsServer)
+            {
+                spawnTimer = spawnInterval;
+            }
         }
 
         public override void OnNetworkDespawn()
         {
             if (IsServer)
             {
-                Reset();
+                ResetServer();
             }
-            
+
+            ResetLocal();
+
             base.OnNetworkDespawn();
         }
-        
+
+        public override void OnDestroy()
+        {
+            if (Singleton == this)
+            {
+                Singleton = null;
+            }
+            
+            pool?.Clear();
+
+            base.OnDestroy();
+        }
+
         private void Update()
         {
-            if (GamePhase.Singleton.Phase.Value != GamePhaseType.Running)
-                return;
-            
             if (!IsServer)
                 return;
 
             if (!IsSpawned)
                 return;
 
-            if (activeThreats.Count >= maxThreats)
+            if (GamePhase.Singleton == null)
+                return;
+
+            if (GamePhase.Singleton.Phase.Value != GamePhaseType.Running)
                 return;
 
             spawnTimer += Time.deltaTime;
@@ -90,7 +106,11 @@ namespace Game
 
             TrySpawn();
         }
-        
+
+        // ============================================================
+        // SPAWN
+        // ============================================================
+
         public bool TrySpawn()
         {
             if (!IsServer)
@@ -100,58 +120,102 @@ namespace Game
                 return false;
 
             Threat threat = pool.Get();
-            threat.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
 
+            if (threat == null)
+                return false;
+
+            threat.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
             threat.NetworkObject.Spawn();
+
             activeThreats.Add(threat);
 
             return true;
         }
         
-        private Threat CreateSupply()
+        private Threat CreateThreat()
         {
-            Threat supply = Instantiate(prefab, transform);
-            supply.gameObject.SetActive(false);
+            Threat threat = Instantiate(prefab, transform);
 
-            supply.Release += HandleSupplyReleased;
+            threat.gameObject.SetActive(false);
+            threat.Release += HandleThreatReleased;
 
-            return supply;
+            return threat;
         }
 
-        private void OnGetSupply(Threat supply)
+        private void OnGetThreat(Threat threat)
         {
-            supply.gameObject.SetActive(true);
+            if (threat == null)
+                return;
+
+            threat.gameObject.SetActive(true);
         }
 
-        private void OnReleaseSupply(Threat supply)
+        private void OnReleaseThreat(Threat threat)
         {
-            supply.gameObject.SetActive(false);
+            if (threat == null)
+                return;
 
-            supply.transform.SetParent(transform, false);
-            supply.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            threat.gameObject.SetActive(false);
+            threat.transform.SetParent(transform, false);
+
+            threat.transform.SetLocalPositionAndRotation(
+                Vector3.zero,
+                Quaternion.identity
+            );
         }
 
-        private void OnDestroySupply(Threat supply)
+        private void OnDestroyThreat(Threat threat)
         {
-            supply.Release -= HandleSupplyReleased;
+            if (threat == null)
+                return;
 
-            Destroy(supply.gameObject);
+            threat.Release -= HandleThreatReleased;
+
+            Destroy(threat.gameObject);
         }
 
-        private void HandleSupplyReleased(Threat supply)
+        private void HandleThreatReleased(Threat threat)
         {
             if (!IsServer)
                 return;
 
-            activeThreats.Remove(supply);
+            if (threat == null)
+                return;
 
-            if (supply.IsSpawned)
+            activeThreats.Remove(threat);
+            pool.Release(threat);
+        }
+        
+        private void ResetLocal()
+        {
+            activeThreats.Clear();
+            spawnTimer = 0f;
+        }
+
+        private void ResetServer()
+        {
+            if (!IsServer)
+                return;
+
+            spawnTimer = spawnInterval;
+            warehouse.Reset();
+            
+            for (int i = activeThreats.Count - 1; i >= 0; i--)
             {
-                supply.NetworkObject.Despawn(false);
+                Threat threat = activeThreats[i];
+                
+                if (threat.NetworkObject.IsSpawned)
+                {
+                    threat.NetworkObject.Despawn(false);
+                }
             }
 
-            pool.Release(supply);
+            activeThreats.Clear();
         }
+
+        // ============================================================
+        // SPAWN POSITION
+        // ============================================================
 
         private bool TryGetSpawnPosition(out Vector2 position)
         {
@@ -168,41 +232,23 @@ namespace Game
             position = default;
             return false;
         }
-        
-        public void Reset()
-        {
-            if (!IsServer)
-                return;
-
-            spawnTimer = spawnInterval;
-
-            for (int i = activeThreats.Count - 1; i >= 0; i--)
-            {
-                Threat threat = activeThreats[i];
-
-                if (threat == null)
-                    continue;
-
-                if (threat.IsSpawned)
-                {
-                    threat.NetworkObject.Despawn(false);
-                }
-
-                pool.Release(threat);
-            }
-
-            activeThreats.Clear();
-        }
 
         private Vector2 GetRandomPosition()
         {
-            Vector2 randomOffset = Random.insideUnitCircle * spawnRadius;
+            Vector2 randomOffset =
+                Random.insideUnitCircle * spawnRadius;
+
             return (Vector2)transform.position + randomOffset;
         }
 
         private bool CanSpawnAt(Vector2 position)
         {
-            Collider2D collider = Physics2D.OverlapCircle(position, spawnCheckRadius, collisionMask);
+            Collider2D collider = Physics2D.OverlapCircle(
+                position,
+                spawnCheckRadius,
+                collisionMask
+            );
+
             return collider == null;
         }
 
@@ -211,8 +257,15 @@ namespace Game
             if (!drawGizmos)
                 return;
 
-            Gizmos.DrawWireSphere(transform.position, spawnRadius);
-            Gizmos.DrawWireSphere(transform.position, spawnCheckRadius);
+            Gizmos.DrawWireSphere(
+                transform.position,
+                spawnRadius
+            );
+
+            Gizmos.DrawWireSphere(
+                transform.position,
+                spawnCheckRadius
+            );
         }
     }
 }

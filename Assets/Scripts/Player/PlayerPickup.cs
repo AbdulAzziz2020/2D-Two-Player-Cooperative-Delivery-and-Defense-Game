@@ -11,12 +11,7 @@ namespace Game
         [Header("Visual")]
         [SerializeField] private SpriteRenderer pickedIcon;
 
-        public NetworkVariable<SupplyData> Data { get; private set; } =
-            new(
-                default,
-                NetworkVariableReadPermission.Everyone,
-                NetworkVariableWritePermission.Server
-            );
+        public NetworkVariable<SupplyData> Data { get; private set; } = new();
 
         public bool IsCarrying => Data.Value.IsValid;
 
@@ -183,7 +178,7 @@ namespace Game
             if (!Data.Value.IsValid)
                 return;
             
-            warehouse.UpdateCapacity(Data.Value);
+            warehouse.AddSupply(Data.Value);
             Data.Value = SupplyData.Empty;
         }
     }

@@ -9,6 +9,7 @@ namespace Game
     [RequireComponent(typeof(PlayerMovement))]
     [RequireComponent(typeof(PlayerInteractor))]
     [RequireComponent(typeof(PlayerPickup))]
+    [RequireComponent(typeof(PlayerAttack))]
     [RequireComponent(typeof(NetworkObject))]
     [RequireComponent(typeof(NetworkTransform))]
     public class Player : NetworkBehaviour
@@ -16,18 +17,21 @@ namespace Game
         [SerializeField] private PlayerMovement movement;
         [SerializeField] private PlayerInteractor interactor;
         [SerializeField] private PlayerPickup pickup;
+        [SerializeField] private PlayerAttack attack;
 
         private PlayerInputReader input;
 
         public PlayerMovement Movement => movement;
         public PlayerInteractor Interactor => interactor;
         public PlayerPickup Pickup => pickup;
+        public PlayerAttack Attack => attack;
 
         private void Awake()
         {
             movement ??= GetComponent<PlayerMovement>();
             interactor ??= GetComponent<PlayerInteractor>();
             pickup ??= GetComponent<PlayerPickup>();
+            attack ??= GetComponent<PlayerAttack>();
 
             input = new PlayerInputReader();
 
@@ -39,6 +43,7 @@ namespace Game
             movement = GetComponent<PlayerMovement>();
             interactor = GetComponent<PlayerInteractor>();
             pickup = GetComponent<PlayerPickup>();
+            attack = GetComponent<PlayerAttack>();
         }
 
         public override void OnNetworkSpawn()
@@ -50,15 +55,16 @@ namespace Game
             if (!IsOwner)
             {
                 Collider2D collider = GetComponent<Collider2D>();
+
                 if (collider != null)
-                {
                     collider.enabled = false;
-                }
+
                 return;
             }
-            
+
             input.Move += OnMove;
             input.Interact += OnInteract;
+            input.Attack += OnAttack;
 
             GamePhase.Singleton.PhaseRequest.OnValueChanged += HandlePhaseRequest;
             CameraFollow.Singleton.Set(transform);
@@ -75,6 +81,7 @@ namespace Game
             {
                 input.Move -= OnMove;
                 input.Interact -= OnInteract;
+                input.Attack -= OnAttack;
 
                 GamePhase.Singleton.PhaseRequest.OnValueChanged -= HandlePhaseRequest;
 
@@ -84,7 +91,9 @@ namespace Game
             base.OnNetworkDespawn();
         }
 
-        private void HandlePhaseRequest(PauseRequest previousValue, PauseRequest newValue)
+        private void HandlePhaseRequest(
+            PauseRequest previousValue,
+            PauseRequest newValue)
         {
             if (newValue.isPause)
                 input.Disable();
@@ -96,10 +105,21 @@ namespace Game
         {
             if (!IsOwner)
                 return;
-            
+
             movement.SetInput(input);
         }
-        
+
+        private void OnAttack()
+        {
+            if (!IsOwner)
+                return;
+
+            if (pickup.IsCarrying)
+                return;
+
+            SendAttackToServerRpc();
+        }
+
         private void OnInteract()
         {
             if (pickup == null || interactor == null)
@@ -115,21 +135,16 @@ namespace Game
             }
 
             if (target is not Component component)
-            {
                 return;
-            }
 
             if (!target.CanInteract(this))
-            {
                 return;
-            }
 
-            NetworkObject networkObject = component.GetComponent<NetworkObject>();
+            NetworkObject networkObject =
+                component.GetComponent<NetworkObject>();
 
             if (networkObject == null || !networkObject.IsSpawned)
-            {
                 return;
-            }
 
             SendInteractToServerRpc(networkObject);
         }
@@ -137,33 +152,35 @@ namespace Game
         private void TryDrop()
         {
             if (!pickup.IsCarrying)
-            {
                 return;
-            }
 
             pickup.TryDrop();
         }
 
+        [Rpc(SendTo.Server)]
+        private void SendAttackToServerRpc()
+        {
+            if (pickup.IsCarrying)
+                return;
+
+            attack.Attack(movement.FacingDirection);
+        }
 
         [Rpc(SendTo.Server)]
-        private void SendInteractToServerRpc(NetworkObjectReference objectReference)
+        private void SendInteractToServerRpc(
+            NetworkObjectReference objectReference)
         {
             if (!objectReference.TryGet(out NetworkObject networkObject))
                 return;
-            
-            IInteractable interactable = networkObject.GetComponent<IInteractable>();
+
+            IInteractable interactable =
+                networkObject.GetComponent<IInteractable>();
 
             if (interactable == null)
-            {
                 return;
-            }
-            
-            bool canInteract = interactable.CanInteract(this);
-            
-            if (!canInteract)
-            {
+
+            if (!interactable.CanInteract(this))
                 return;
-            }
 
             interactable.Interact(this);
         }

@@ -1,4 +1,5 @@
 using Game.Patterns;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Game
@@ -6,8 +7,11 @@ namespace Game
     public class AttackThreatState : BaseState<Threat, ThreatState>
     {
         private const float ARRIVAL_DISTANCE = 0.1f;
-        
-        public AttackThreatState(Threat entity, StateMachine<Threat, ThreatState> stateMachine) : base(entity, stateMachine)
+
+        public AttackThreatState(
+            Threat entity,
+            StateMachine<Threat, ThreatState> stateMachine)
+            : base(entity, stateMachine)
         {
         }
 
@@ -18,22 +22,39 @@ namespace Game
             if (!Entity.IsServer)
                 return;
 
-            if (!Entity.TryGetSupply(out Supply supply))
+            NetworkObject target = Entity.TargetObject;
+
+            if (target == null)
             {
                 Entity.ChangeState(ThreatState.Idle);
                 return;
             }
-            
+
             Vector2 currentPosition = Entity.transform.position;
-            Vector2 nextPosition = Vector2.MoveTowards(currentPosition, supply.transform.position, Entity.MoveSpeed * deltaTime);
-            
+            Vector2 targetPosition = target.transform.position;
+
+            Vector2 nextPosition = Vector2.MoveTowards(
+                currentPosition,
+                targetPosition,
+                Entity.MoveSpeed * deltaTime
+            );
+
             Entity.transform.position = nextPosition;
-            
-            if (Vector2.Distance(nextPosition, supply.transform.position) > ARRIVAL_DISTANCE)
+
+            if (Vector2.Distance(nextPosition, targetPosition) > ARRIVAL_DISTANCE)
                 return;
-            
-            supply.TakeDamage();
-            
+
+            if (target.TryGetComponent(out Supply supply))
+            {
+                supply.TakeDamage();
+            }
+            else if (target.TryGetComponent(out Warehouse warehouse))
+            {
+                warehouse.TakeDamage();
+                Entity.ChangeState(ThreatState.Die);
+                return;
+            }
+
             Entity.ChangeState(ThreatState.Idle);
         }
     }

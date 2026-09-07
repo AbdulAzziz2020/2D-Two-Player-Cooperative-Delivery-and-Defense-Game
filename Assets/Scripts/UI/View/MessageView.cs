@@ -26,5 +26,10 @@ namespace Game.UI
         {
             this.message.text = message;
         }
+        
+        public void SetButtonText(string text)
+        {
+            disconnect.GetComponentInChildren<TMP_Text>().text = text;
+        }
     }
 }

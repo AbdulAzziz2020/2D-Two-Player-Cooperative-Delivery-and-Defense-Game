@@ -42,6 +42,15 @@ namespace Game
         // General
         public static readonly Message DISCONNECT = new("disconnect", "Disconnected from the server.");
         public static readonly Message UNKNOWN = new("unknown", "An unknown error occurred.");
+
+        public static readonly Message EMPTY_NAME = new("empty_name", "Please enter a name");
+        public static readonly Message HOST_START_FAILED = new("host_start_failed", "Failed to start host");
+        public static readonly Message CLIENT_START_FAILED = new("client_start_failed", "Failed to start client");
+        public static readonly Message TRANSPORT_FAILED = new("transport_failed", "Network connection failed");
+        public static readonly Message HOST_BUTTON = new("host_button", "Host");
+        public static readonly Message HOSTING_BUTTON = new("hosting_button", "Hosting...");
+        public static readonly Message CLIENT_BUTTON = new("client_button", "Join");
+        public static readonly Message JOINING_BUTTON = new("joining_button", "Joining...");
         
         public static readonly Message[] All =
         {

@@ -351,11 +351,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game::Game.ThreatSupplyFinder
   ShowTopMostFoldoutHeaderGroup: 1
-  radius: 10
+  radius: 3
   supplyLayer:
     serializedVersion: 2
     m_Bits: 64
   showGizmos: 1
+  supplyTargetChance: 0.7
 --- !u!114 &8804836260503435296
 MonoBehaviour:
   m_ObjectHideFlags: 0

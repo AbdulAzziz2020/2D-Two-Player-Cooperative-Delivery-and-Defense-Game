@@ -11,101 +11,154 @@ namespace Game.UI
 
         private void Start()
         {
+            NetworkManager networkManager = NetworkManager.Singleton;
+
             view.Host += HandleHost;
             view.Client += HandleClient;
             view.NameChanged += HandleNameChanged;
 
-            NetworkManager.Singleton.OnClientDisconnectCallback += HandleDisconnect;
-            NetworkManager.Singleton.OnClientConnectedCallback += HandleConnect;
-            
+            networkManager.OnClientDisconnectCallback += HandleDisconnect;
+            networkManager.OnClientConnectedCallback += HandleConnect;
+            networkManager.OnTransportFailure += HandleTransportFailure;
+
             view.Show();
+
+            ResetUI();
         }
 
-      
         private void OnDestroy()
         {
             view.Host -= HandleHost;
             view.Client -= HandleClient;
             view.NameChanged -= HandleNameChanged;
 
-            if (NetworkManager.Singleton != null)
-            {
-                NetworkManager.Singleton.OnClientDisconnectCallback -= HandleDisconnect;
-                NetworkManager.Singleton.OnClientConnectedCallback -= HandleConnect;
-            }
-        }
-        
-        private void HandleConnect(ulong obj)
-        {
-            if(obj != NetworkManager.Singleton.LocalClientId)
+            if (NetworkManager.Singleton == null)
                 return;
-            
+
+            NetworkManager networkManager = NetworkManager.Singleton;
+
+            networkManager.OnClientDisconnectCallback -= HandleDisconnect;
+            networkManager.OnClientConnectedCallback -= HandleConnect;
+            networkManager.OnTransportFailure -= HandleTransportFailure;
+        }
+
+        private void HandleHost()
+        {
+            if (!HasValidName())
+                return;
+
+            NetworkManager networkManager = NetworkManager.Singleton;
+
+            view.HideMessage();
+            view.SetButtons(false);
+            view.SetHostButtonText(MessageResponse.HOSTING_BUTTON.message.ToString());
+
+            networkManager.NetworkConfig.ConnectionData = CreateConnectionData();
+
+            bool success = networkManager.StartHost();
+
+            if (success)
+                return;
+
+            Debug.LogError("Failed to start host.");
+
+            ShowConnectionError(MessageResponse.HOST_START_FAILED.message.ToString());
+        }
+
+        private void HandleClient()
+        {
+            if (!HasValidName())
+                return;
+
+            NetworkManager networkManager = NetworkManager.Singleton;
+
+            view.HideMessage();
+            view.SetButtons(false);
+            view.SetClientButtonText(MessageResponse.JOINING_BUTTON.message.ToString());
+
+            networkManager.NetworkConfig.ConnectionData = CreateConnectionData();
+
+            bool success = networkManager.StartClient();
+
+            if (success)
+                return;
+
+            Debug.LogError("Failed to start client.");
+
+            ShowConnectionError(MessageResponse.CLIENT_START_FAILED.message.ToString());
+        }
+
+        private void HandleConnect(ulong clientId)
+        {
+            NetworkManager networkManager = NetworkManager.Singleton;
+
+            if (clientId != networkManager.LocalClientId)
+                return;
+
+            Debug.Log("Connected successfully.");
+
+            view.HideMessage();
             view.Hide();
         }
-        
+
         private void HandleDisconnect(ulong clientId)
         {
-            if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.TransportShutdown ||
-                clientId == NetworkManager.Singleton.LocalClientId)
-            {
-                view.Show();
-                view.SetButtons(true);
-            }
+            NetworkManager networkManager = NetworkManager.Singleton;
+
+            if (clientId != networkManager.LocalClientId)
+                return;
+            
+            ShowConnectionError(MessageResponse.CONNECTION_FAILED.message.ToString());
         }
-        
+
+        private void HandleTransportFailure()
+        {
+            NetworkManager networkManager = NetworkManager.Singleton;
+
+            Debug.LogError(
+                $"Transport failure. " +
+                $"Reason: {networkManager.DisconnectReason}"
+            );
+
+            ShowConnectionError(MessageResponse.TRANSPORT_FAILED.message.ToString());
+        }
+
         private void HandleNameChanged(string value)
         {
             playerName = value;
         }
 
-        private void HandleHost()
+        private bool HasValidName()
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(playerName))
-                    return;
+            if (!string.IsNullOrWhiteSpace(playerName))
+                return true;
 
-                NetworkManager networkManager = NetworkManager.Singleton;
-                networkManager.NetworkConfig.ConnectionData = CreateConnectionData();
+            view.SetMessage(MessageResponse.EMPTY_NAME.message.ToString());
 
-                bool success = networkManager.StartHost();
-
-                view.SetButtons(false);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-            finally
-            {
-                view.SetButtons(true);
-            }
+            return false;
         }
 
-        private void HandleClient()
+        private void ShowConnectionError(string message)
         {
-            if (string.IsNullOrWhiteSpace(playerName))
-                return;
+            view.Show();
+            view.SetButtons(true);
+            view.SetMessage(message);
 
-            NetworkManager networkManager = NetworkManager.Singleton;
-            networkManager.NetworkConfig.ConnectionData = CreateConnectionData();
+            ResetButtonText();
+        }
 
-            view.SetButtons(false);
+        private void ResetUI()
+        {
+            view.SetButtons(true);
+            view.HideMessage();
 
-            bool success = networkManager.StartClient();
+            ResetButtonText();
+        }
 
-            if (!success)
-                view.SetButtons(true);
-
-            Debug.Log($"Client started: {success}");
-
-            if (!success &&
-                !string.IsNullOrEmpty(networkManager.DisconnectReason))
-            {
-                Debug.LogWarning(
-                    $"Connection failed: {networkManager.DisconnectReason}"
-                );
-            }
+        private void ResetButtonText()
+        {
+            view.SetHostButtonText(MessageResponse.HOST_BUTTON.message.ToString());
+            view.SetClientButtonText(MessageResponse.CLIENT_BUTTON.message.ToString());
         }
 
         private byte[] CreateConnectionData()
@@ -113,6 +166,7 @@ namespace Game.UI
             string playerId = SystemInfo.deviceUniqueIdentifier;
 
             PlayerInfo info = new(playerId, playerName);
+
             string json = JsonUtility.ToJson(info);
 
             return Encoding.UTF8.GetBytes(json);

@@ -4,13 +4,19 @@ using UnityEngine;
 
 namespace Game
 {
-    public class ThreatSupplyFinder : NetworkBehaviour
+    public class ThreatTargetFinder : NetworkBehaviour
     {
+        [Header("Detection")]
         [SerializeField] private float radius = 5f;
         [SerializeField] private LayerMask supplyLayer;
         [SerializeField] private bool showGizmos = true;
 
+        [Header("Target Chance")]
+        [SerializeField, Range(0f, 1f)]
+        private float supplyTargetChance = 0.7f;
+
         private const int MAX_RESULTS = 16;
+
         private readonly Collider2D[] results = new Collider2D[MAX_RESULTS];
 
         private NetworkVariable<NetworkObjectReference> targetReference = new();
@@ -19,7 +25,7 @@ namespace Game
 
         private void Awake()
         {
-            filter = new ContactFilter2D()
+            filter = new ContactFilter2D
             {
                 useLayerMask = true,
                 layerMask = supplyLayer,
@@ -31,31 +37,57 @@ namespace Game
         {
             get
             {
-                return targetReference.Value.TryGet(out NetworkObject networkObject) &&
+                return targetReference.Value.TryGet(
+                           out NetworkObject networkObject
+                       ) &&
                        networkObject != null &&
                        networkObject.IsSpawned;
             }
         }
 
-        public Supply Target
+        public NetworkObject TargetObject
         {
             get
             {
-                if (!targetReference.Value.TryGet(out NetworkObject networkObject))
+                if (!targetReference.Value.TryGet(
+                        out NetworkObject networkObject))
                 {
                     return null;
                 }
 
-                return networkObject.GetComponent<Supply>();
+                if (networkObject == null ||
+                    !networkObject.IsSpawned)
+                {
+                    return null;
+                }
+
+                return networkObject;
             }
         }
 
-        public bool TryFindSupply()
+        public bool TryFindTarget()
         {
             if (!IsServer)
                 return false;
 
-            int size = Physics2D.OverlapCircle(transform.position, radius, filter, results);
+            Clear();
+
+            bool targetSupply = UnityEngine.Random.value < supplyTargetChance;
+
+            if (targetSupply)
+                return TryFindSupply();
+
+            return TryFindWarehouse();
+        }
+
+        private bool TryFindSupply()
+        {
+            int size = Physics2D.OverlapCircle(
+                transform.position,
+                radius,
+                filter,
+                results
+            );
 
             for (int i = 0; i < size; i++)
             {
@@ -72,24 +104,30 @@ namespace Game
                 return true;
             }
 
-            Clear();
-
             return false;
         }
 
-        public bool TryGetTarget(out Supply supply)
+        private bool TryFindWarehouse()
         {
-            supply = Target;
+            Warehouse warehouse = FindFirstObjectByType<Warehouse>();
 
-            if (supply == null)
-            {
-                Clear();
+            if (warehouse == null)
                 return false;
-            }
+
+            if (!warehouse.NetworkObject.IsSpawned)
+                return false;
+
+            if (warehouse.IsDestroyed)
+                return false;
+
+            targetReference.Value =
+                new NetworkObjectReference(
+                    warehouse.NetworkObject
+                );
 
             return true;
         }
-
+        
         public void Clear()
         {
             if (!IsServer)
@@ -103,7 +141,10 @@ namespace Game
             if (!showGizmos)
                 return;
 
-            Gizmos.DrawWireSphere(transform.position, radius);
+            Gizmos.DrawWireSphere(
+                transform.position,
+                radius
+            );
         }
     }
 }

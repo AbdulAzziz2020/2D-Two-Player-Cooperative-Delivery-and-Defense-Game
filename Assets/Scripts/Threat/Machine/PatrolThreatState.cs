@@ -29,8 +29,8 @@ namespace Game
             if (!Entity.IsServer)
                 return;
 
-            // Prioritas pertama: cari supply.
-            if (Entity.TryFindSupply())
+            // Prioritas pertama: cari target.
+            if (Entity.TryFindTarget())
             {
                 Entity.ChangeState(ThreatState.Attack);
                 return;
@@ -40,9 +40,13 @@ namespace Game
                 return;
 
             Vector2 currentPosition = Entity.transform.position;
-            Vector2 nextPosition = Vector2.MoveTowards(currentPosition, target, Entity.MoveSpeed * deltaTime);
 
-            // Update posisi.
+            Vector2 nextPosition = Vector2.MoveTowards(
+                currentPosition,
+                target,
+                Entity.MoveSpeed * deltaTime
+            );
+
             Entity.transform.position = nextPosition;
 
             if (Vector2.Distance(nextPosition, target) > ARRIVAL_DISTANCE)
@@ -50,8 +54,8 @@ namespace Game
 
             Entity.CompletePatrol();
 
-            // Setelah sampai, langsung cari supply lagi.
-            if (Entity.TryFindSupply())
+            // Setelah sampai, coba cari target lagi.
+            if (Entity.TryFindTarget())
             {
                 Entity.ChangeState(ThreatState.Attack);
                 return;

@@ -8,7 +8,8 @@ namespace Game
     {
         Idle,
         Attack,
-        Patrol
+        Patrol,
+        Die
     }
     
     public class ThreatStateMachine : StateMachine<Threat, ThreatState>
@@ -20,6 +21,7 @@ namespace Game
             Register(new IdleThreatState(entity, this));
             Register(new PatrolThreatState(entity, this));
             Register(new AttackThreatState(entity, this));
+            Register(new DieThreatState(entity, this));
 
             ChangeState(startType);
         }

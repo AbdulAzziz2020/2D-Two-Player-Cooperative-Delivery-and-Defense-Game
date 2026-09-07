@@ -8,7 +8,8 @@ namespace Game
     {
         public event Action<Vector2> Move;
         public event Action Interact;
-
+        public event Action Attack;
+        
         private PlayerInput input = new();
         
         public void Enable()
@@ -40,6 +41,14 @@ namespace Game
                 return;
             
             Interact?.Invoke();
+        }
+
+        public void OnAttack(InputAction.CallbackContext context)
+        {
+            if (context.phase != InputActionPhase.Performed)
+                return;
+            
+            Attack?.Invoke();
         }
     }
 }

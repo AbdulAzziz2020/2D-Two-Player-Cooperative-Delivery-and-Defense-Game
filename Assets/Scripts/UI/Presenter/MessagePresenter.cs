@@ -39,7 +39,8 @@ namespace Game.UI
         {
             if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.ClosedByRemote)
             {
-                view.SetMessage(MessageResponse.SERVER_CLOSED);
+                view.SetMessage(MessageResponse.SERVER_CLOSED.message.ToString());
+                view.SetMessage("Exit");
                 return;
             }
             
@@ -73,6 +74,7 @@ namespace Game.UI
 
             view.SetMessage(!newRequest.IsHost() ? "Paused by other player." : "Paused by host.");
             view.Show();
+            view.SetMessage("Exit");
         }
 
         private void HandleClientDisconnect()

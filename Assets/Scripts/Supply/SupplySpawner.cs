@@ -85,7 +85,12 @@ namespace Game
 
             for (int i = activeSupplies.Count - 1; i >= 0; i--)
             {
-                ReleaseSupply(activeSupplies[i]);
+                Supply supply = activeSupplies[i];
+
+                if (supply.NetworkObject.IsSpawned)
+                {
+                    supply.NetworkObject.Despawn(false);
+                }
             }
 
             activeSupplies.Clear();
@@ -165,9 +170,9 @@ namespace Game
 
         private Supply CreateSupply()
         {
-            Supply supply = Instantiate(prefab, transform);
-            supply.gameObject.SetActive(false);
+            Supply supply = Instantiate(prefab);
 
+            supply.gameObject.SetActive(false);
             supply.Release += HandleSupplyReleased;
 
             return supply;
@@ -182,9 +187,7 @@ namespace Game
         {
             supply.gameObject.SetActive(false);
 
-            supply.transform.SetParent(transform, false);
-
-            supply.transform.SetLocalPositionAndRotation(
+            supply.transform.SetPositionAndRotation(
                 Vector3.zero,
                 Quaternion.identity
             );
@@ -193,8 +196,10 @@ namespace Game
         private void OnDestroySupply(Supply supply)
         {
             supply.Release -= HandleSupplyReleased;
-
-            Destroy(supply.gameObject);
+            if (supply.gameObject != null)
+            {
+                Destroy(supply.gameObject);
+            }
         }
 
         private void HandleSupplyReleased(Supply supply)
@@ -202,21 +207,7 @@ namespace Game
             if (!IsServer)
                 return;
 
-            ReleaseSupply(supply);
-        }
-
-        private void ReleaseSupply(Supply supply)
-        {
-            if (supply == null)
-                return;
-
             activeSupplies.Remove(supply);
-
-            if (supply.IsSpawned)
-            {
-                supply.NetworkObject.Despawn(false);
-            }
-
             pool.Release(supply);
         }
 
@@ -238,11 +229,8 @@ namespace Game
 
         private Vector2 GetRandomPosition()
         {
-            Vector2 randomOffset =
-                Random.insideUnitCircle * spawnRadius;
-
-            return (Vector2)transform.position +
-                   randomOffset;
+            Vector2 randomOffset = Random.insideUnitCircle * spawnRadius;
+            return (Vector2)transform.position + randomOffset;
         }
 
         private bool CanSpawnAt(Vector2 position)
