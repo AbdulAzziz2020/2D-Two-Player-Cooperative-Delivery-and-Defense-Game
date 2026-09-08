@@ -150,7 +150,7 @@ Add Project
 ↓
 Select Folder
 ↓
-Open with Unity 6000.3.5f2 LTS
+Open with Unity 6000.3.10f1 LTS
 ```
 
 ---
