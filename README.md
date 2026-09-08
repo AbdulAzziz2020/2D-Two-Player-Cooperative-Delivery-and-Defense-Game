@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Unity](https://img.shields.io/badge/Unity-6000.3.5f2_LTS-black?logo=unity)](https://unity.com/)
+[![Unity](https://img.shields.io/badge/Unity-6000.3.10f1_LTS-black?logo=unity)](https://unity.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows_|_macOS-blue)]()
 [![Status](https://img.shields.io/badge/Status-Prototype-orange)]()
 [![License](https://img.shields.io/badge/License-Internal-red)]()
