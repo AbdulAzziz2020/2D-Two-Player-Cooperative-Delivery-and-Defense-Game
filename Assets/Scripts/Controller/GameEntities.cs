@@ -7,13 +7,16 @@ namespace Game
 {
     public class GameEntities : NetworkBehaviour
     {
+
         [Header("Warehouse")]
         [SerializeField] private Warehouse warehouse;
+        public Warehouse Warehouse => warehouse;
 
         [Header("Threats")]
         [SerializeField] private Threat prefab;
         [SerializeField] private float spawnInterval = 30f;
-        [SerializeField] private float spawnRadius = 5f;
+        [SerializeField] private float minSpawnRadius = 5f;
+        [SerializeField] private float maxSpawnRadius = 10f;
         [SerializeField] private float spawnCheckRadius = 0.5f;
         [SerializeField] private LayerMask collisionMask;
         [SerializeField] private int maxSpawnAttempts = 20;
@@ -31,7 +34,7 @@ namespace Game
         private float spawnTimer;
 
         public static GameEntities Singleton { get; private set; }
-
+        
         private void Awake()
         {
             Singleton = this;
@@ -48,6 +51,14 @@ namespace Game
                 maxSize: poolMaxSize
             );
         }
+        
+        private void OnValidate()
+        {
+            minSpawnRadius = Mathf.Max(0f, minSpawnRadius);
+            maxSpawnRadius = Mathf.Max(minSpawnRadius, maxSpawnRadius);
+            spawnCheckRadius = Mathf.Max(0f, spawnCheckRadius);
+            maxSpawnAttempts = Mathf.Max(1, maxSpawnAttempts);
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -57,6 +68,8 @@ namespace Game
             {
                 spawnTimer = spawnInterval;
             }
+
+            GamePhase.Singleton.Phase.OnValueChanged += HandlePhaseChanged;
         }
 
         public override void OnNetworkDespawn()
@@ -67,8 +80,23 @@ namespace Game
             }
 
             ResetLocal();
+            
+            GamePhase.Singleton.Phase.OnValueChanged -= HandlePhaseChanged;
 
             base.OnNetworkDespawn();
+        }
+        
+        private void HandlePhaseChanged(GamePhaseType previousValue, GamePhaseType newValue)
+        {
+            if (newValue == GamePhaseType.Restart)
+            {
+                if (IsServer)
+                {
+                    ResetServer();
+                }
+
+                ResetLocal();
+            }
         }
 
         public override void OnDestroy()
@@ -157,11 +185,7 @@ namespace Game
 
             threat.gameObject.SetActive(false);
             threat.transform.SetParent(transform, false);
-
-            threat.transform.SetLocalPositionAndRotation(
-                Vector3.zero,
-                Quaternion.identity
-            );
+            threat.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
         }
 
         private void OnDestroyThreat(Threat threat)
@@ -170,7 +194,6 @@ namespace Game
                 return;
 
             threat.Release -= HandleThreatReleased;
-
             Destroy(threat.gameObject);
         }
 
@@ -235,10 +258,15 @@ namespace Game
 
         private Vector2 GetRandomPosition()
         {
-            Vector2 randomOffset =
-                Random.insideUnitCircle * spawnRadius;
+            Vector2 direction = Random.insideUnitCircle.normalized;
 
-            return (Vector2)transform.position + randomOffset;
+            float radius = Random.Range(
+                minSpawnRadius,
+                maxSpawnRadius
+            );
+
+            return (Vector2)transform.position +
+                   direction * radius;
         }
 
         private bool CanSpawnAt(Vector2 position)
@@ -259,7 +287,12 @@ namespace Game
 
             Gizmos.DrawWireSphere(
                 transform.position,
-                spawnRadius
+                minSpawnRadius
+            );
+
+            Gizmos.DrawWireSphere(
+                transform.position,
+                maxSpawnRadius
             );
 
             Gizmos.DrawWireSphere(

@@ -15,6 +15,7 @@ namespace Game
         [Header("Selection")]
         [SerializeField] private float directionWeight = 10f;
         [SerializeField] private float distanceWeight = 1f;
+        [SerializeField] private bool showGizmos = true;
 
         private ContactFilter2D contactFilter;
         private Collider2D[] results;
@@ -81,7 +82,7 @@ namespace Game
             float bestScore = float.MinValue;
 
             Vector2 position = transform.position;
-            Vector2 forward = owner.Movement.FacingDirection;
+            Vector2 forward = owner.Movement.FacingDirection.Value;
 
             if (forward.sqrMagnitude <= 0.0001f)
                 forward = Vector2.up;
@@ -155,8 +156,11 @@ namespace Game
 
         private void OnDrawGizmos()
         {
+            if (!showGizmos)
+                return;
+            
             Vector3 position = transform.position;
-            Vector3 forward = owner?.Movement.FacingDirection ?? Vector2.up;
+            Vector3 forward = owner?.Movement.FacingDirection.Value ?? Vector2.up;
 
             DrawDetectionGizmos(position, forward);
             DrawTargetGizmos(position);

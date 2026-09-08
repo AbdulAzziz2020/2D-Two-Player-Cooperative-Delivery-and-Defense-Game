@@ -2,14 +2,13 @@ using Game.Patterns;
 
 namespace Game
 {
-    
-
     public enum ThreatState
     {
         Idle,
         Attack,
         Patrol,
-        Die
+        Die,
+        Search
     }
     
     public class ThreatStateMachine : StateMachine<Threat, ThreatState>
@@ -22,6 +21,7 @@ namespace Game
             Register(new PatrolThreatState(entity, this));
             Register(new AttackThreatState(entity, this));
             Register(new DieThreatState(entity, this));
+            Register(new SearchThreatState(entity, this));
 
             ChangeState(startType);
         }

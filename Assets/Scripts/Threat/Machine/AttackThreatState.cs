@@ -32,13 +32,10 @@ namespace Game
 
             Vector2 currentPosition = Entity.transform.position;
             Vector2 targetPosition = target.transform.position;
+            
+            Entity.Rotate2D(targetPosition);
 
-            Vector2 nextPosition = Vector2.MoveTowards(
-                currentPosition,
-                targetPosition,
-                Entity.MoveSpeed * deltaTime
-            );
-
+            Vector2 nextPosition = Vector2.MoveTowards(currentPosition, targetPosition, Entity.MoveSpeed * deltaTime);
             Entity.transform.position = nextPosition;
 
             if (Vector2.Distance(nextPosition, targetPosition) > ARRIVAL_DISTANCE)

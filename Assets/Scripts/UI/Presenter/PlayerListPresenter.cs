@@ -14,11 +14,6 @@ namespace Game.UI
             NetworkManager.Singleton.OnClientDisconnectCallback += HandleDisconnect;
         }
 
-        private void HandleCountdownChanged(int previousValue, int newValue)
-        {
-            view.SetStateText("Game running in " + newValue);
-        }
-
         private void HandleDisconnect(ulong clientId)
         {
             if (NetworkManager.Singleton.DisconnectEvent == NetworkTransport.DisconnectEvents.TransportShutdown || NetworkManager.Singleton.LocalClientId == clientId)

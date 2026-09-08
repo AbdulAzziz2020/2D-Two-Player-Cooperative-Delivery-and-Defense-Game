@@ -50,6 +50,8 @@ namespace Game
         {
             base.OnNetworkSpawn();
 
+            GamePhase.Singleton.Phase.OnValueChanged += HandlePhaseChanged;
+            
             if (!IsServer)
                 return;
 
@@ -58,12 +60,25 @@ namespace Game
 
         public override void OnNetworkDespawn()
         {
+            GamePhase.Singleton.Phase.OnValueChanged -= HandlePhaseChanged;
+            
             if (IsServer)
             {
                 Reset();
             }
 
             base.OnNetworkDespawn();
+        }
+
+        private void HandlePhaseChanged(GamePhaseType previousValue, GamePhaseType newValue)
+        {
+            if (newValue == GamePhaseType.Restart)
+            {
+                if (IsServer)
+                {
+                    Reset();
+                }
+            }
         }
 
         public override void OnDestroy()
@@ -117,7 +132,6 @@ namespace Game
             TrySpawn();
         }
 
-        [ContextMenu("Spawn")]
         public bool TrySpawn()
         {
             if (!IsServer)
@@ -127,44 +141,33 @@ namespace Game
                 return false;
 
             Supply supply = pool.Get();
-
-            SupplySO supplySo =
-                SupplyCollection.Singleton.GetRandomSupply();
+            if (supply == null)
+                return false;
+            
+            SupplySO supplySo = SupplyCollection.Singleton.GetRandomSupply();
 
             SupplyData supplyData = supplySo.Create();
-
             supply.PrepareSpawn(supplyData);
 
-            supply.transform.SetPositionAndRotation(
-                spawnPosition,
-                Quaternion.identity
-            );
-
+            supply.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
             supply.NetworkObject.Spawn();
-
+            
             activeSupplies.Add(supply);
-
+            
             return true;
         }
 
-        public void SpecificSpawn(
-            Vector3 spawnPosition,
-            SupplyData data)
+        public void SpecificSpawn(Vector3 spawnPosition, SupplyData data)
         {
             if (!IsServer)
                 return;
 
             Supply supply = pool.Get();
-
-            supply.transform.SetPositionAndRotation(
-                spawnPosition,
-                Quaternion.identity
-            );
-
             supply.PrepareSpawn(data);
-
+            
+            supply.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
             supply.NetworkObject.Spawn();
-
+            
             activeSupplies.Add(supply);
         }
 
@@ -180,26 +183,29 @@ namespace Game
 
         private void OnGetSupply(Supply supply)
         {
+            if (supply == null)
+                return;
+            
             supply.gameObject.SetActive(true);
         }
 
         private void OnReleaseSupply(Supply supply)
         {
+            if (supply == null)
+                return;
+            
             supply.gameObject.SetActive(false);
-
-            supply.transform.SetPositionAndRotation(
-                Vector3.zero,
-                Quaternion.identity
-            );
+            supply.transform.SetParent(transform, false);
+            supply.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         }
 
         private void OnDestroySupply(Supply supply)
         {
+            if (supply == null)
+                return;
+            
             supply.Release -= HandleSupplyReleased;
-            if (supply.gameObject != null)
-            {
-                Destroy(supply.gameObject);
-            }
+            Destroy(supply.gameObject);
         }
 
         private void HandleSupplyReleased(Supply supply)
@@ -207,6 +213,9 @@ namespace Game
             if (!IsServer)
                 return;
 
+            if (supply == null)
+                return;
+            
             activeSupplies.Remove(supply);
             pool.Release(supply);
         }

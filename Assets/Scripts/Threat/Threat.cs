@@ -59,6 +59,7 @@ namespace Game
 
         private void HandleStateChanged(ThreatState previousValue, ThreatState newValue)
         {
+            Debug.Log("New State: " + newValue);
             RefreshVisual();
         }
 
@@ -116,8 +117,20 @@ namespace Game
             if (state.Value == newState)
                 return;
 
-            machine.ChangeState(newState);
             state.Value = newState;
+            machine.ChangeState(newState);
+        }
+        
+        public void Rotate2D(Vector3 target)
+        {
+            Vector3 direction = target - transform.position;
+
+            if (direction.sqrMagnitude <= 0f)
+                return;
+
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+
+            visual.localRotation = Quaternion.Euler(0f, 0f, angle - 90f);
         }
 
         public void TakeDamage()

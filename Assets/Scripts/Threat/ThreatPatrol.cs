@@ -1,3 +1,4 @@
+using System;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -6,7 +7,8 @@ namespace Game
     public class ThreatPatrol : NetworkBehaviour
     {
         [SerializeField] private float radius = 3f;
-
+        [SerializeField] private bool showGizmos = true;
+        
         private Vector2 target;
         private bool isComplete;
 
@@ -29,6 +31,15 @@ namespace Game
                 return;
 
             isComplete = true;
+        }
+
+        private void OnDrawGizmos()
+        {
+            if(!showGizmos)
+                return;
+            
+            Gizmos.DrawWireSphere(transform.position, radius);
+            Gizmos.DrawLine(transform.position, target);
         }
     }
 }

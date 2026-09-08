@@ -26,13 +26,7 @@ namespace Game
             if (!Entity.IsServer)
                 return;
 
-            if (Entity.TryFindTarget())
-            {
-                Entity.ChangeState(ThreatState.Attack);
-                return;
-            }
-
-            Entity.ChangeState(ThreatState.Patrol);
+            Entity.ChangeState(ThreatState.Search);
         }
     }
 }

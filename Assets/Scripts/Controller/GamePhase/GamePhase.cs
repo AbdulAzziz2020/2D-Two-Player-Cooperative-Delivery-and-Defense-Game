@@ -1,7 +1,3 @@
-using System;
-using Cysharp.Threading.Tasks;
-using Game.Patterns;
-using PlasticPipe.PlasticProtocol.Messages;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -50,6 +46,23 @@ namespace Game
             base.OnNetworkDespawn();
         }
         
+        private void HandleListChanged(NetworkListEvent<PlayerSession> changeEvent)
+        {
+            if (changeEvent.Type == NetworkListEvent<PlayerSession>.EventType.RemoveAt)
+            {
+                if(Phase.Value == GamePhaseType.Victory || Phase.Value == GamePhaseType.Defeat)
+                {
+                    ChangeState(GamePhaseType.Restart);
+                }
+                
+                if (PhaseRequest.Value.isPause)
+                {
+                    PhaseRequest.Value = PauseRequest.Empty;
+                    ChangeState(GamePhaseType.Waiting);
+                }
+            }
+        }
+        
         public void ChangeState(GamePhaseType state)
         {
             if (!IsServer)
@@ -58,17 +71,8 @@ namespace Game
             if (Phase.Value == state)
                 return;
             
-            machine.ChangeState(state);
             Phase.Value = state;
-        }
-        
-        private void HandleListChanged(NetworkListEvent<PlayerSession> changeEvent)
-        {
-            if (changeEvent.Type == NetworkListEvent<PlayerSession>.EventType.RemoveAt && PhaseRequest.Value.isPause)
-            {
-                PhaseRequest.Value = PauseRequest.Empty;
-                ChangeState(GamePhaseType.Waiting);
-            }
+            machine.ChangeState(state);
         }
 
         private void Update()
@@ -92,9 +96,8 @@ namespace Game
         private void RequestPauseRpc(PauseRequest pauseRequest)
         {
             Debug.Log($"Pause requested by {pauseRequest.senderId}, {pauseRequest.isPause}");
-            PhaseRequest.Value = pauseRequest;
-            
             ChangeState(GamePhaseType.Paused);
+            PhaseRequest.Value = pauseRequest;
         }
 
         // =========================================================
@@ -124,6 +127,14 @@ namespace Game
             }
             
             ChangeState(GamePhaseType.Waiting);
+        }
+
+        public void Restart()
+        {
+            if (!IsServer)
+                return;
+            
+            ChangeState(GamePhaseType.Restart);
         }
     }
 }

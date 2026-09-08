@@ -12,10 +12,9 @@ namespace Game
         [SerializeField] private float moveSpeed = 5f;
 
         private Vector2 moveInput;
-        private Vector2 facingDirection = Vector2.down;
+        public NetworkVariable<Vector2> FacingDirection { get; private set; } = new (Vector2.down, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         public Vector2 MoveInput => moveInput;
-        public Vector2 FacingDirection => facingDirection;
 
         private void Awake()
         {
@@ -24,16 +23,20 @@ namespace Game
 
         private void Reset()
         {
-            rb = GetComponent<NetworkRigidbody2D>();
+            rb = GetComponent<NetworkRigidbody2D>(); 
+            FacingDirection.Value = Vector2.down;
         }
 
         public void SetInput(Vector2 input)
         {
             moveInput = input;
 
+            if (!IsOwner)
+                return;
+            
             if (input.sqrMagnitude > 0.0001f)
             {
-                facingDirection = input.normalized;
+                FacingDirection.Value = input.normalized;
             }
         }
 

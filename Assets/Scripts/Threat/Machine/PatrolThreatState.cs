@@ -3,9 +3,11 @@ using UnityEngine;
 
 namespace Game
 {
-    public class PatrolThreatState : BaseState<Threat, ThreatState>
+    public sealed class PatrolThreatState : BaseState<Threat, ThreatState>
     {
         private const float ARRIVAL_DISTANCE = 0.1f;
+        private const float ARRIVAL_DISTANCE_SQR =
+            ARRIVAL_DISTANCE * ARRIVAL_DISTANCE;
 
         public PatrolThreatState(
             Threat entity,
@@ -29,7 +31,6 @@ namespace Game
             if (!Entity.IsServer)
                 return;
 
-            // Prioritas pertama: cari target.
             if (Entity.TryFindTarget())
             {
                 Entity.ChangeState(ThreatState.Attack);
@@ -37,30 +38,23 @@ namespace Game
             }
 
             if (!Entity.TryGetPatrolTarget(out Vector2 target))
-                return;
-
-            Vector2 currentPosition = Entity.transform.position;
-
-            Vector2 nextPosition = Vector2.MoveTowards(
-                currentPosition,
-                target,
-                Entity.MoveSpeed * deltaTime
-            );
-
-            Entity.transform.position = nextPosition;
-
-            if (Vector2.Distance(nextPosition, target) > ARRIVAL_DISTANCE)
-                return;
-
-            Entity.CompletePatrol();
-
-            // Setelah sampai, coba cari target lagi.
-            if (Entity.TryFindTarget())
             {
-                Entity.ChangeState(ThreatState.Attack);
+                Entity.ChangeState(ThreatState.Idle);
                 return;
             }
 
+            Vector2 currentPosition = Entity.transform.position;
+            Entity.Rotate2D(target);
+
+            Vector2 nextPosition = Vector2.MoveTowards(currentPosition, target, Entity.MoveSpeed * deltaTime);
+            Entity.transform.position = nextPosition;
+
+            if ((nextPosition - target).sqrMagnitude > ARRIVAL_DISTANCE_SQR)
+            {
+                return;
+            }
+
+            Entity.CompletePatrol();
             Entity.ChangeState(ThreatState.Idle);
         }
     }

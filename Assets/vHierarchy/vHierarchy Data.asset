@@ -13,8 +13,27 @@ MonoBehaviour:
   m_Name: vHierarchy Data
   m_EditorClassIdentifier: VHierarchy::VHierarchy.VHierarchyData
   sceneDatas_byGuid:
-    keys: []
-    values: []
+    keys:
+    - 8c9cfa26abfee488c85f1582747f6a02
+    values:
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-1509584459-0
+        - globalObjectIdString: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-918144803-0
+        - globalObjectIdString: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-1950084374-0
+        values:
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
   bookmarks: []
   bookmarkedScenePaths:
   - Assets/Scenes/Gameplay.unity

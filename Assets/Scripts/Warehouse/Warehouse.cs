@@ -46,16 +46,12 @@ namespace Game
             base.OnNetworkDespawn();
         }
 
-        private void HandleSupplyChanged(
-            int previousValue,
-            int newValue)
+        private void HandleSupplyChanged(int previousValue, int newValue)
         {
             RefreshVisual();
         }
 
-        private void HandleHealthChanged(
-            int previousValue,
-            int newValue)
+        private void HandleHealthChanged(int previousValue, int newValue)
         {
             RefreshVisual();
         }

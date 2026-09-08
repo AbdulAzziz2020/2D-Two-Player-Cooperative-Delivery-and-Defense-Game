@@ -17,6 +17,13 @@ namespace Game
 
         public SupplyData CurrentData => Data.Value;
 
+        private Player player;
+        
+        public void Initialize(Player player)
+        {
+            this.player = player;
+        }
+        
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
@@ -31,6 +38,11 @@ namespace Game
             Data.OnValueChanged -= OnDataChanged;
 
             base.OnNetworkDespawn();
+        }
+
+        public void Reset()
+        {
+            Data.Value = SupplyData.Empty;
         }
 
         public void TryPickup(Supply supply)
@@ -127,6 +139,7 @@ namespace Game
         private void OnDataChanged(SupplyData previous, SupplyData current)
         {
             RefreshVisual();
+            player.Animator.SetCarrying(current.IsValid);
         }
 
         private void RefreshVisual()

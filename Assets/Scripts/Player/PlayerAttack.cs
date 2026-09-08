@@ -9,6 +9,9 @@ namespace Game
         [SerializeField] private float angle = 90f;
         [SerializeField] private ContactFilter2D contactFilter;
 
+        [Header("Gizmos")]
+        [SerializeField] private bool showGizmos = true;
+
         private const int MAX_RESULTS = 16;
 
         private readonly Collider2D[] results =
@@ -17,28 +20,33 @@ namespace Game
         private readonly Threat[] targets =
             new Threat[MAX_RESULTS];
 
-
-      
-
-        public void Attack(Vector3 facingDirection)
+        private Player player;
+        
+        public void Initialize(Player player)
         {
-            int count = FindTargets(facingDirection, targets, targets.Length);
+            this.player = player;
+        }
+        
+        public void Attack()
+        {
+            int count = FindTargets(targets, targets.Length);
+
             for (int i = 0; i < count; i++)
             {
                 Threat threat = targets[i];
 
                 if (threat == null)
                     continue;
-                
-                if(!threat.NetworkObject.IsSpawned)
+
+                if (!threat.NetworkObject.IsSpawned)
                     continue;
-                
+
                 threat.TakeDamage();
                 targets[i] = null;
             }
         }
 
-        private int FindTargets(Vector3 facingDirection, Threat[] targets, int maxTargets)
+        private int FindTargets(Threat[] targets, int maxTargets)
         {
             int count = Physics2D.OverlapCircle(
                 transform.position,
@@ -48,7 +56,7 @@ namespace Game
             );
 
             Vector2 position = transform.position;
-            Vector2 forward = facingDirection;
+            Vector2 forward = player.Movement.FacingDirection.Value;
 
             if (forward.sqrMagnitude <= 0.0001f)
                 forward = Vector2.up;
@@ -95,6 +103,107 @@ namespace Game
             }
 
             return targetCount;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!showGizmos)
+                return;
+
+            Vector2 forward = player.Movement.FacingDirection.Value;
+
+            if (forward.sqrMagnitude <= 0.0001f)
+                forward = Vector2.up;
+
+            forward.Normalize();
+
+            Vector2 position = transform.position;
+
+            float halfAngle = angle * 0.5f;
+
+            Vector2 leftDirection = Rotate(
+                forward,
+                -halfAngle
+            );
+
+            Vector2 rightDirection = Rotate(
+                forward,
+                halfAngle
+            );
+
+            // Detection radius
+            Gizmos.DrawWireSphere(
+                position,
+                radius
+            );
+
+            // Center direction
+            Gizmos.DrawLine(
+                position,
+                position + forward * radius
+            );
+
+            // Cone boundaries
+            Gizmos.DrawLine(
+                position,
+                position + leftDirection * radius
+            );
+
+            Gizmos.DrawLine(
+                position,
+                position + rightDirection * radius
+            );
+
+            // Arc
+            DrawArc(
+                position,
+                radius,
+                forward,
+                angle
+            );
+        }
+
+        private static Vector2 Rotate(
+            Vector2 direction,
+            float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+
+            return new Vector2(
+                direction.x * cos - direction.y * sin,
+                direction.x * sin + direction.y * cos
+            );
+        }
+
+        private static void DrawArc(
+            Vector2 center,
+            float radius,
+            Vector2 forward,
+            float totalAngle)
+        {
+            const int segments = 24;
+
+            float halfAngle = totalAngle * 0.5f;
+            float step = totalAngle / segments;
+
+            Vector2 previous =
+                center + Rotate(forward, -halfAngle) * radius;
+
+            for (int i = 1; i <= segments; i++)
+            {
+                float currentAngle =
+                    -halfAngle + step * i;
+
+                Vector2 current =
+                    center + Rotate(forward, currentAngle) * radius;
+
+                Gizmos.DrawLine(previous, current);
+
+                previous = current;
+            }
         }
     }
 }

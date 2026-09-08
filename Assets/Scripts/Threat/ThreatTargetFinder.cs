@@ -4,44 +4,32 @@ using UnityEngine;
 
 namespace Game
 {
-    public class ThreatTargetFinder : NetworkBehaviour
+    public sealed class ThreatTargetFinder : NetworkBehaviour
     {
         [Header("Detection")]
-        [SerializeField] private float radius = 5f;
-        [SerializeField] private LayerMask supplyLayer;
+        [SerializeField] private float supplyDetectionRange = 5f;
+        [SerializeField] private float warehouseDetectionRange = 10f;
+        [SerializeField] private LayerMask targetLayer;
         [SerializeField] private bool showGizmos = true;
 
-        [Header("Target Chance")]
+        [Header("Selection")]
         [SerializeField, Range(0f, 1f)]
         private float supplyTargetChance = 0.7f;
 
         private const int MAX_RESULTS = 16;
 
-        private readonly Collider2D[] results = new Collider2D[MAX_RESULTS];
+        private readonly Collider2D[] results =
+            new Collider2D[MAX_RESULTS];
 
         private NetworkVariable<NetworkObjectReference> targetReference = new();
 
         private ContactFilter2D filter;
 
-        private void Awake()
-        {
-            filter = new ContactFilter2D
-            {
-                useLayerMask = true,
-                layerMask = supplyLayer,
-                useTriggers = true
-            };
-        }
-
         public bool HasTarget
         {
             get
             {
-                return targetReference.Value.TryGet(
-                           out NetworkObject networkObject
-                       ) &&
-                       networkObject != null &&
-                       networkObject.IsSpawned;
+                return TargetObject != null;
             }
         }
 
@@ -65,6 +53,16 @@ namespace Game
             }
         }
 
+        private void Awake()
+        {
+            filter = new ContactFilter2D
+            {
+                useLayerMask = true,
+                layerMask = targetLayer,
+                useTriggers = true
+            };
+        }
+
         public bool TryFindTarget()
         {
             if (!IsServer)
@@ -72,34 +70,54 @@ namespace Game
 
             Clear();
 
-            bool targetSupply = UnityEngine.Random.value < supplyTargetChance;
+            bool preferSupply = UnityEngine.Random.value < supplyTargetChance;
 
-            if (targetSupply)
-                return TryFindSupply();
+            if (preferSupply)
+            {
+                if (TryFindSupply())
+                    return true;
 
-            return TryFindWarehouse();
+                return TryFindWarehouse();
+            }
+
+            if (TryFindWarehouse())
+                return true;
+
+            return TryFindSupply();
         }
 
         private bool TryFindSupply()
         {
             int size = Physics2D.OverlapCircle(
                 transform.position,
-                radius,
+                supplyDetectionRange,
                 filter,
                 results
             );
 
             for (int i = 0; i < size; i++)
             {
-                Supply supply = results[i].GetComponent<Supply>();
+                Collider2D collider = results[i];
+
+                if (collider == null)
+                    continue;
+
+                Supply supply = collider.GetComponent<Supply>();
 
                 if (supply == null)
                     continue;
 
-                if (!supply.NetworkObject.IsSpawned)
-                    continue;
+                NetworkObject networkObject =
+                    supply.NetworkObject;
 
-                targetReference.Value = new NetworkObjectReference(supply.NetworkObject);
+                if (networkObject == null ||
+                    !networkObject.IsSpawned)
+                {
+                    continue;
+                }
+
+                targetReference.Value =
+                    new NetworkObjectReference(networkObject);
 
                 return true;
             }
@@ -109,25 +127,46 @@ namespace Game
 
         private bool TryFindWarehouse()
         {
-            Warehouse warehouse = FindFirstObjectByType<Warehouse>();
+            int size = Physics2D.OverlapCircle(
+                transform.position,
+                warehouseDetectionRange,
+                filter,
+                results
+            );
 
-            if (warehouse == null)
-                return false;
+            for (int i = 0; i < size; i++)
+            {
+                Collider2D collider = results[i];
 
-            if (!warehouse.NetworkObject.IsSpawned)
-                return false;
+                if (collider == null)
+                    continue;
 
-            if (warehouse.IsDestroyed)
-                return false;
+                Warehouse warehouse = collider.GetComponent<Warehouse>();
 
-            targetReference.Value =
-                new NetworkObjectReference(
-                    warehouse.NetworkObject
-                );
+                if (warehouse == null)
+                    continue;
 
-            return true;
+                NetworkObject networkObject =
+                    warehouse.NetworkObject;
+
+                if (networkObject == null ||
+                    !networkObject.IsSpawned)
+                {
+                    continue;
+                }
+
+                if (warehouse.IsDestroyed)
+                    continue;
+
+                targetReference.Value =
+                    new NetworkObjectReference(networkObject);
+
+                return true;
+            }
+
+            return false;
         }
-        
+
         public void Clear()
         {
             if (!IsServer)
@@ -143,7 +182,12 @@ namespace Game
 
             Gizmos.DrawWireSphere(
                 transform.position,
-                radius
+                supplyDetectionRange
+            );
+
+            Gizmos.DrawWireSphere(
+                transform.position,
+                warehouseDetectionRange
             );
         }
     }

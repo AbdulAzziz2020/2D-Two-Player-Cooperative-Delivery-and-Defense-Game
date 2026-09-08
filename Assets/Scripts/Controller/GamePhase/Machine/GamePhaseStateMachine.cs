@@ -11,7 +11,7 @@ namespace Game
         Victory,
         Defeat,
         Paused,
-        Aborted
+        Restart
     }
     
     public class GamePhaseStateMachine : StateMachine<GamePhase, GamePhaseType>
@@ -24,7 +24,7 @@ namespace Game
             Register(new VictoryPhaseState(entity, this));
             Register(new DefeatPhaseState(entity, this));
             Register(new PausedPhaseState(entity, this));
-            Register(new AbortedPhaseState(entity, this));
+            Register(new RestartPhaseState(entity, this));
             
             ChangeState(startType);
         }
