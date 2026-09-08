@@ -7,7 +7,7 @@
 [![Status](https://img.shields.io/badge/Status-Prototype-orange)]()
 [![License](https://img.shields.io/badge/License-Internal-red)]()
 
-Prototype Turn-Based RPG built with Unity.
+Prototype Multiplayer with Unity NGO.
 
 </div>
 
