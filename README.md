@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Unity](https://img.shields.io/badge/Unity-6000.3.10f1_LTS-black?logo=unity)](https://unity.com/)
+[![Unity](https://img.shields.io/badge/Unity-6000.0.75f1_LTS-black?logo=unity)](https://unity.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows_|_macOS-blue)]()
 [![Status](https://img.shields.io/badge/Status-Prototype-orange)]()
 [![License](https://img.shields.io/badge/License-Internal-red)]()
@@ -63,6 +63,8 @@ Assets
 ├── Scripts/
 │   └── Assemdef
 |
+├── Settings/
+|
 └── Sprites/
 ```
 
@@ -77,6 +79,7 @@ Pattern yang digunakan dalam project:
 - Singleton (Quick Prototype)
 - Observer
 - State Machine
+- Object Pooling
 
 ## Gameplay Patterns
 
@@ -131,7 +134,7 @@ public void TakeDamage(int amount)
 
 ## Requirements
 
-- Unity 6000.3.10f1 LTS
+- Unity 6000.0.75f1 LTS
 - Git
 - Visual Studio / Rider
 
@@ -150,7 +153,7 @@ Add Project
 ↓
 Select Folder
 ↓
-Open with Unity 6000.3.10f1 LTS
+Open with Unity 6000.0.75f1 LTS
 ```
 
 ---
@@ -159,7 +162,7 @@ Open with Unity 6000.3.10f1 LTS
 
 ## Untuk Pemain (Rilisan ZIP)
 
-1. Unduh versi terbaru dari [Google Drive](https://drive.google.com/file/d/15LG0BeMj10-x_L0Nm2yl639lk4wEHgPJ/view?usp=sharing)
+1. Unduh versi terbaru dari [Google Drive](https://drive.google.com/file/d/1loB2Ffn8wrq1m1bMpPup8F4co03C0WLK/view?usp=sharing)
 2. Ekstrak seluruh file ZIP ke satu folder.
 3. Pastikan file `.exe` dan folder `_Data` berada pada lokasi yang sama.
 4. Jalankan:
